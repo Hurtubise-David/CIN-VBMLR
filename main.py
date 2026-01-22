@@ -806,7 +806,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         if not row:
             return None
 
-        # normalized -> liste des clés originales (préserve l'ordre)
+        # normalized -> original list of key
         norm_map = {}
         for kk in row.keys():
             if kk is None:
@@ -822,14 +822,14 @@ class ExrSequencePage(QtWidgets.QWidget):
         for wanted in keys:
             w = str(wanted).replace("\ufeff", "").strip().lower()
 
-            # 1) match exact normalisé (mais peut correspondre à plusieurs colonnes)
+            # 1) match exact normalized
             if w in norm_map:
                 for orig in norm_map[w]:
                     v = row.get(orig, "")
                     if _valid(v):
                         return str(v).strip()
 
-            # 2) fallback: contient (ex: "Master TC Time Base", "Master TC__2", etc.)
+            # 2) fallback: content (ex: "Master TC Time Base", "Master TC__2", etc.)
             for nk, orig_list in norm_map.items():
                 if w in nk:
                     for orig in orig_list:
@@ -868,7 +868,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
     def _infer_nominal_fps(self) -> int:
         """
-        Pour TC SMPTE, on prend un fps nominal entier (24/25/30/60/120...).
+        For TC SMPTE, take a fps nominal (24/25/30/60/120...).
         23.976 -> 24 ; 29.97 -> 30 ; etc.
         """
         fps = float(self.fps_box.value())
@@ -877,7 +877,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
 
     def _draw_panel_bottom_left(self, img_bgr8: np.ndarray, lines, pad=10):
-        """Dessine un panneau sombre + texte en bas-gauche."""
+        """ Draw pannel."""
         if img_bgr8 is None or not lines:
             return img_bgr8
 
@@ -901,7 +901,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         x2 = min(x2, w - 10)
         y1 = max(y1, 10)
 
-        # panneau sombre
+        # black pannel
         cv2.rectangle(img_bgr8, (x1, y1), (x2, y2), (10, 10, 10), -1)
         cv2.rectangle(img_bgr8, (x1, y1), (x2, y2), (60, 60, 60), 1)
 
@@ -915,13 +915,13 @@ class ExrSequencePage(QtWidgets.QWidget):
 
 
     def open_exr_dir(self):
-        d = QtWidgets.QFileDialog.getExistingDirectory(self, "Choisir un dossier de séquence EXR", str(Path.cwd()))
+        d = QtWidgets.QFileDialog.getExistingDirectory(self, "Choose a sequence EXR folder", str(Path.cwd()))
         if not d:
             return
         self.exr_dir = Path(d)
         files = sorted(glob.glob(str(self.exr_dir / "*.exr")), key=natural_key)
         if not files:
-            QtWidgets.QMessageBox.warning(self, "EXR", "Aucun fichier .exr trouvé dans ce dossier.")
+            QtWidgets.QMessageBox.warning(self, "EXR", "No file .exr found in folder.")
             return
 
         self.exr_files = files
@@ -949,7 +949,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         self._render_current()
         self._build_opti_alignment_cache()
 
-        self._status(f"EXR: {len(self.exr_files)} frames chargées depuis {self.exr_dir.name}")
+        self._status(f"EXR: {len(self.exr_files)} loaded frames since {self.exr_dir.name}")
 
         if hasattr(self, "viewer3d") and self.viewer3d is not None:
             self.viewer3d.clear()
@@ -959,7 +959,7 @@ class ExrSequencePage(QtWidgets.QWidget):
     def open_meta_csv(self):
         path, _ = QtWidgets.QFileDialog.getOpenFileName(
             self,
-            "Charger CSV Meta Extract",
+            "Load CSV Meta Extract",
             str(self.exr_dir or Path.cwd()),
             "CSV (*.csv)"
         )
@@ -968,39 +968,36 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         self.meta_path = Path(path)
 
-        # On récupère les 3 sorties
+        # Take outputs
         self.meta_rows_seq, self.meta_rows_by_frame, self.meta_clip_name = self._parse_meta_csv(self.meta_path)
 
         self._build_opti_alignment_cache()
 
-        # Vérification clip CSV vs EXR (simple mais efficace)
+        # Validate clip CSV vs EXR
         exr_prefix = Path(self.exr_files[0]).name.split(".")[0] if self.exr_files else ""
         clip_name = self.meta_clip_name
 
         if clip_name and exr_prefix and (exr_prefix not in clip_name) and (clip_name not in exr_prefix):
             QtWidgets.QMessageBox.warning(
                 self,
-                "Attention",
-                f"Le CSV semble être pour un autre clip.\n\nEXR: {exr_prefix}\nCSV: {clip_name}\n\n"
-                "Si tu continues, l’alignement frame→meta peut être faux."
+                "Warning",
+                f"The CSV file seems to be for another clip.\n\nEXR: {exr_prefix}\nCSV: {clip_name}\n\n"
+                "If you continue, the alignement frame→meta can be wrong."
             )
 
         self._render_current()
 
         nseq = len(self.meta_rows_seq)
         nmap = len(self.meta_rows_by_frame)
-        self._status(f"CSV chargé: {self.meta_path.name}  (lignes={nseq}, index frame={nmap})")
+        self._status(f"CSV loaded: {self.meta_path.name}  (lines={nseq}, index frame={nmap})")
 
 
     def _parse_meta_csv(self, csv_path: Path):
         """
-        Retour:
-        meta_rows_seq: list[dict]          (ordre des lignes)
-        meta_rows_by_frame: dict[int,dict] (si une colonne frame est trouvée)
+        Return:
+        meta_rows_seq: list[dict]          (from line order)
+        meta_rows_by_frame: dict[int,dict] (if col frame is found)
         clip_name: str|None
-
-        IMPORTANT: gère les headers dupliqués (ex: 'Master TC' apparaît 2 fois)
-        en les renommant automatiquement: Master TC, Master TC__2, etc.
         """
         meta_rows_seq = []
         meta_rows_by_frame = {}
