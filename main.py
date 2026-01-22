@@ -1841,51 +1841,7 @@ class CalibrateStereoPage(QtWidgets.QWidget):
                 pass
             self.cap = None
         self.start_btn.setEnabled(True); self.stop_btn.setEnabled(False)
-        self.log_append("Caméra arrêtée.")
-
-
-    """
-    La page Calibrate Stereo ouvre ta caméra stéréo side-by-side (une image 3840×1080 contenant gauche/droite à 1920×1080 chacune), détecte un damier, empile N paires de points 2D ↔ 3D, puis lance :
-
-    Calibration mono gauche & droite (intrinsèques + distorsion)
-
-    Calibration stéréo (R, T, E, F) avec intrinsèques fixées
-
-    Rectification (R1, R2, P1, P2, Q)
-
-    Sauvegarde YAML complète et prête à l’emploi (pour rectifier/reprojeter, faire de la disparité, etc.)
-
-
-
-        Dans le panneau Damier :
-
-        Colonnes / Lignes = nombre de coins internes (pas le nombre de carrés).
-
-        Taille carrés (m) = arête d’un carré en mètres (ex.: 0.0200 pour 2 cm).
-
-        Le code crée pour chaque capture un nuage d’objets 3D objp plan (Z=0) : avec s= square_size_m.
-
-        
-        À chaque frame :
-
-        cv2.findChessboardCorners(gray, (cols, rows)) détecte les coins du damier.
-
-        Si trouvé, raffinement subpixel avec cv2.cornerSubPix(...) pour gagner en précision. subpixel est essentielle : elle réduit le RMS de reprojection et stabilise R/T.
-
-        Le code fixe certains coefficients pour stabiliser l’estimation :
-
-
-        CALIB_ZERO_TANGENT_DIST → 
-
-        CALIB_FIX_K3 | K4 | K5 | K6 → seul radial (k1, k2) est ajusté
-
-        RMS gauche / RMS droite : erreur de reprojection (en pixels).
-
-        cv2.stereoCalibrate(...) avec CALIB_FIX_INTRINSIC garde kL, kR, DISTL, DISTR constants, et estime R et E
-
-        cv2.stereoRectify(...) produit R1, R2 rectifiés, Q reprojection. Q pour passer la profondeur
-
-    """    
+        self.log_append("Caméra arrêtée.")   
 
     # ----- Boucle de prévisualisation -----
     def _on_timer(self):
@@ -2294,6 +2250,51 @@ class PlaceholderPage(QtWidgets.QWidget):
         lbl = QtWidgets.QLabel(f"<h2 style='margin:0'>{title}</h2><div>{subtitle}</div>")
         lbl.setAlignment(QtCore.Qt.AlignCenter)
         lay.addStretch(1); lay.addWidget(lbl); lay.addStretch(1)
+
+
+# ============================ Wrappers ============================ #
+class VDAWrapper:
+    def __init__(self, encoder: str = "vits"):
+        self.encoder = encoder
+        self.device = "cuda" if torch.cuda.is_available() else "cpu"
+
+        model_configs = {
+            "vits": {"encoder": "vits", "features": 64,  "out_channels": [48, 96, 192, 384]},
+            "vitl": {"encoder": "vitl", "features": 256, "out_channels": [256, 512, 1024, 1024]},
+        }
+        if encoder not in model_configs:
+            raise ValueError(f"Unknown encoder={encoder}. Use 'vits' or 'vitl'.")
+
+        ckpt = os.path.join(os.path.dirname(__file__), "checkpoints", f"video_depth_anything_{encoder}.pth")
+        if not os.path.isfile(ckpt):
+            raise FileNotFoundError(f"Missing checkpoint: {ckpt}")
+
+        self.model = VideoDepthAnything(**model_configs[encoder])
+        self.model.load_state_dict(torch.load(ckpt, map_location="cpu"), strict=True)
+        self.model = self.model.to(self.device).eval()
+
+    @torch.no_grad()
+    def infer_depth_colormap_bgr(self, frame_bgr_u8: np.ndarray, input_size: int = 518) -> np.ndarray:
+        """
+        Input: BGR uint8
+        Output: BGR uint8 colored depth map (OpenCV colormap)
+        """
+        rgb = cv2.cvtColor(frame_bgr_u8, cv2.COLOR_BGR2RGB)
+        depth = self.model.infer_video_depth_one(rgb, input_size=input_size, device=self.device)
+
+        # depth -> numpy
+        depth = depth.squeeze()
+        depth_np = depth.detach().cpu().numpy() if torch.is_tensor(depth) else np.asarray(depth)
+
+        # robust normalize
+        lo = np.percentile(depth_np, 2.0)
+        hi = np.percentile(depth_np, 98.0)
+        depth_norm = (depth_np - lo) / (hi - lo + 1e-6)
+        depth_norm = np.clip(depth_norm, 0.0, 1.0)
+
+        depth_u8 = (depth_norm * 255).astype(np.uint8)
+        depth_col = cv2.applyColorMap(depth_u8, cv2.COLORMAP_MAGMA)  # BGR
+        return depth_col
 
 
 # ============================ Application MainWindow ============================ #
