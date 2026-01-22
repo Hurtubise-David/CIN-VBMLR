@@ -744,6 +744,18 @@ class ExrSequencePage(QtWidgets.QWidget):
         # ---- UI ----
         layout = QtWidgets.QHBoxLayout(self)
 
+        # --- VDA thread (EXR) ---
+        self.vda_thread = None
+        self.vda_worker = None
+        if self.vda is not None:
+            self.vda_worker = VDAWorker(self.vda)
+            self.vda_thread = QtCore.QThread(self)
+            self.vda_worker.moveToThread(self.vda_thread)
+            self.vda_thread.started.connect(self.vda_worker.run_loop)
+            self.vda_worker.depth_ready.connect(self._on_vda_depth_ready)
+            self.vda_worker.status_msg.connect(self._status)
+            self.vda_thread.start()
+
         # Preview
         left = QtWidgets.QVBoxLayout()
         self.preview = QtWidgets.QLabel(alignment=QtCore.Qt.AlignCenter)
