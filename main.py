@@ -854,9 +854,20 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.slider.valueChanged.connect(self.on_slider)
         left.addWidget(self.slider)
 
-        self.info_line = QtWidgets.QLabel("No EXR sequence loaded.")
-        self.info_line.setStyleSheet("color:#9cf")
-        left.addWidget(self.info_line)
+        self.frame_line = QtWidgets.QLabel("No EXR sequence loaded.")
+        self.frame_line.setStyleSheet("color:#9cf")
+        left.addWidget(self.frame_line)
+
+        self.status_line = QtWidgets.QLabel("")
+        self.status_line.setStyleSheet("color:#0f0")
+        left.addWidget(self.status_line)
+
+        self.log = QtWidgets.QPlainTextEdit()
+        self.log.setReadOnly(True)
+        self.log.setMaximumBlockCount(300)
+        self.log.setMinimumHeight(120)
+        left.addWidget(self.log)
+
 
         layout.addLayout(left, 3)
 
