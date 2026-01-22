@@ -32,7 +32,7 @@ print(dataset['train'][0])
 ```
 
 ## Third-Party Components & Licensing
-This pipeline integrates Video Depth Anything (VDA) to provide dense temporal depth priors.
+This pipeline integrates Video Depth Anything (VDA) (https://github.com/DepthAnything/Video-Depth-Anything) to provide dense temporal depth priors.
 
 * Default Configuration: This repository is configured to use the VDA-Small (vits) model by default.
 * Licensing: The VDA-Small model and code are licensed under Apache-2.0, which is fully compatible with this project's license.
