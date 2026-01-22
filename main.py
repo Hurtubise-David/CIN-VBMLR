@@ -552,6 +552,49 @@ class VideoWriterWorker(QtCore.QObject):
 
 
 # ============================ Capture Worker ============================ #
+class VDAWorker(QtCore.QObject):
+    depth_ready = QtCore.pyqtSignal(np.ndarray, float)  # depth, timestamp
+    status_msg = QtCore.pyqtSignal(str)
+
+    def __init__(self, vda_wrapper):
+        super().__init__()
+        self.vda = vda_wrapper
+        self._lock = threading.Lock()
+        self._latest = None
+        self._stop = False
+
+    @QtCore.pyqtSlot(np.ndarray, float)
+    def submit(self, frame_bgr, ts):
+        with self._lock:
+            self._latest = (frame_bgr.copy(), ts)
+
+    @QtCore.pyqtSlot()
+    def run_loop(self):
+        self.status_msg.emit("VDA: worker start")
+        while not self._stop:
+            item = None
+            with self._lock:
+                item = self._latest
+                self._latest = None
+            if item is None:
+                time.sleep(0.002)
+                continue
+
+            frame_bgr, ts = item
+            try:
+                depth = self.vda.infer(frame_bgr)  # float32 HxW
+                self.depth_ready.emit(depth, ts)
+            except Exception as e:
+                self.status_msg.emit(f"VDA error: {e}")
+
+        self.status_msg.emit("VDA: worker stop")
+
+    @QtCore.pyqtSlot()
+    def stop(self):
+        self._stop = True
+
+
+
 class CaptureWorker(QtCore.QObject):
     frame_ready = QtCore.pyqtSignal(np.ndarray, float, int, str)
     status_msg = QtCore.pyqtSignal(str)
@@ -1307,12 +1350,6 @@ class ExrSequencePage(QtWidgets.QWidget):
             )
             self.info_line.setText(f"[{self.idx+1}/{len(self.exr_files)}] frame_num={frame_num}  |  {Path(exr_path).name}")
             return
-
-        # EXR in float16/float32, 4 channel
-        if exr.ndim == 3 and exr.shape[2] >= 3:
-            exr3 = exr[:, :, :3]
-        else:
-            exr3 = exr
 
         # EXR -> exr3
         if exr.ndim == 3 and exr.shape[2] >= 3:
