@@ -25,6 +25,7 @@ import glob
 import re
 import torch
 import inspect
+import traceback
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -683,7 +684,6 @@ class VDAWorker(QtCore.QObject):
             _ = self.vda.infer(dummy)
             self.status_msg.emit("VDA: warmup ok")
         except Exception as e:
-            import traceback
             self.status_msg.emit(f"VDA warmup error ({type(e).__name__}): {repr(e)}\n{traceback.format_exc()}")
 
         while not self._stop:
@@ -700,10 +700,10 @@ class VDAWorker(QtCore.QObject):
                 self.status_msg.emit(f"VDA ok: depth shape={getattr(depth,'shape',None)} key={key}")
                 self.depth_ready.emit(depth, ts, key)
             except Exception as e:
-                            tb = traceback.format_exc()
-                            self.status_msg.emit(
-                                f"VDA error ({type(e).__name__}): {repr(e)}\n{tb}"
-                            )
+                tb = traceback.format_exc()
+                self.status_msg.emit(
+                f"VDA error ({type(e).__name__}): {repr(e)}\n{tb}"
+                )
 
         self.status_msg.emit("VDA: worker stop")
 
