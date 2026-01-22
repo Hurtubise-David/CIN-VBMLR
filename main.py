@@ -42,7 +42,7 @@ except Exception:
 
 # --- Branding / Logo ---
 APP_NAME = "CIN-VBMLR"
-LOGO_CANDIDATES = ["CIN_logo.png""]
+LOGO_CANDIDATES = ["CIN_logo.png"]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
