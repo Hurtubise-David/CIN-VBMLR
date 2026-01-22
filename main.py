@@ -142,7 +142,7 @@ class OptiTrack3DViewer(QtWidgets.QWidget):
         )
         self.view.addItem(self.pt_item)
 
-        # --- NEW: frustum items (2 items: rays + rectangle) ---
+        # --- frustum items (2 items: rays + rectangle) ---
         self.frustum_rays = gl.GLLinePlotItem(
             pos=np.zeros((1, 3), dtype=np.float32),
             width=1.0, antialias=True, mode='lines'
@@ -162,7 +162,7 @@ class OptiTrack3DViewer(QtWidgets.QWidget):
         self.btn_clear = QtWidgets.QPushButton("Clear")
         self.chk_follow = QtWidgets.QCheckBox("Follow"); self.chk_follow.setChecked(True)
 
-        # NEW: frustum toggle + scale
+        # frustum toggle + scale
         self.chk_frustum = QtWidgets.QCheckBox("Frustum"); self.chk_frustum.setChecked(False)
         self.frustum_scale = QtWidgets.QDoubleSpinBox()
         self.frustum_scale.setRange(0.05, 10.0)
@@ -223,7 +223,7 @@ class OptiTrack3DViewer(QtWidgets.QWidget):
         ], dtype=np.float32)
         return R
 
-    # -------------------- NEW API -------------------- #
+    # -------------------- Trajectory -------------------- #
     def set_current_pose_mm(self, px, py, pz, qx=None, qy=None, qz=None, qw=None):
         """Pose OptiTrack -> update point courant + frustum (si actif)."""
         p = self._mm_to_units(px, py, pz)
@@ -242,8 +242,7 @@ class OptiTrack3DViewer(QtWidgets.QWidget):
 
     def set_trajectory_mm(self, points_mm, reset_origin=True):
         """
-        Remplace la trajectoire par les points jusqu’à la frame courante.
-        points_mm: iterable de (x_mm,y_mm,z_mm) (peut contenir None).
+        points_mm: iterate from (x_mm,y_mm,z_mm).
         """
         pts = []
         for pmm in points_mm:
@@ -336,8 +335,8 @@ class OptiTrack3DViewer(QtWidgets.QWidget):
 
 # ============================ Utils ============================ #
 FOURCC_CANDIDATES = [
-    ("mp4v", ".mp4"),   # très compatible Windows
-    ("MJPG", ".avi"),   # rapide
+    ("mp4v", ".mp4"),   # Windows compatibility
+    ("MJPG", ".avi"),   
     ("XVID", ".avi"),
     ("X264", ".mkv"),
 ]
@@ -346,15 +345,15 @@ QUEUE_MAX = 180  # ~3s @60fps
 
 def exr_read_timecode(exr_path: str):
     """
-    Retourne un SMPTE TC (HH:MM:SS:FF) si trouvé dans le header EXR.
-    Source de vérité: attribut EXR (Imath.TimeCode ou string timecode).
+    Return SMPTE TC (HH:MM:SS:FF) if found in header EXR.
+    attribute EXR (Imath.TimeCode or string timecode).
     """
     try:
         import OpenEXR, Imath
         exr = OpenEXR.InputFile(str(exr_path))
         hdr = exr.header()
 
-        # Clés fréquentes (pipelines réels)
+        # Keys
         candidate_keys = [
             "timeCode", "timecode",
             "smpte:timecode", "smpte:timeCode",
@@ -363,7 +362,7 @@ def exr_read_timecode(exr_path: str):
         ]
 
         def is_smpte(s: str) -> bool:
-            # Format strict HH:MM:SS:FF
+            # Format HH:MM:SS:FF
             if not s:
                 return False
             s = s.strip().replace('"', '')
@@ -376,24 +375,24 @@ def exr_read_timecode(exr_path: str):
             except Exception:
                 return False
 
-        # 1) Cherche clé explicite
+        # 1) Search key
         for k in candidate_keys:
             if k in hdr:
                 v = hdr[k]
 
-                # Vrai type TimeCode
+                # TimeCode Type
                 if hasattr(v, "hours") and hasattr(v, "frame"):
                     tc = f"{int(v.hours):02d}:{int(v.minutes):02d}:{int(v.seconds):02d}:{int(v.frame):02d}"
                     exr.close()
                     return tc
 
-                # Sinon string
+                # Else string
                 s = str(v).strip().replace('"', '')
                 if is_smpte(s):
                     exr.close()
                     return s
 
-        # 2) Heuristique: keys contenant "timecode" ou finissant par "tc"
+        # 2) keys with "timecode" or finishing by "tc"
         for k in hdr.keys():
             kl = k.lower()
             if ("timecode" in kl) or kl.endswith("tc") or ("_tc" in kl):
@@ -417,7 +416,7 @@ def exr_read_timecode(exr_path: str):
 def frame_num_from_exr_filename(exr_path: str) -> int:
     """
     Ex: A002C001_250813_C5HH.00000001.exr -> 1
-    Retourne -1 si pas trouvable.
+    Return -1 if not available.
     """
     name = Path(exr_path).name
     m = re.search(r"\.(\d+)\.exr$", name, flags=re.IGNORECASE)
@@ -427,14 +426,14 @@ def frame_num_from_exr_filename(exr_path: str) -> int:
 
 
 def natural_key(path: str):
-    # tri humain: ..._2.exr avant ..._10.exr
+    # Search: ..._2.exr before ..._10.exr
     return [int(t) if t.isdigit() else t.lower() for t in re.split(r"(\d+)", Path(path).name)]
 
 def exr_to_preview_bgr8(exr_rgb_or_bgr: np.ndarray, gamma: float = 2.2):
     """
-    exr_* attendu en float32/float16 (linéaire), 3 canaux.
-    Retourne une image BGR uint8 pour affichage.
-    NOTE: c’est uniquement un "view transform" pour l’UI.
+    exr_* in float32/float16 (linear), 3 canals.
+    Return BGR image uint8 to screen.
+    NOTE: "view transform" for UI.
     """
     img = exr_rgb_or_bgr
     if img is None:
@@ -442,7 +441,7 @@ def exr_to_preview_bgr8(exr_rgb_or_bgr: np.ndarray, gamma: float = 2.2):
     if img.ndim == 2:
         img = np.repeat(img[..., None], 3, axis=2)
 
-    # clamp pour preview (évite NaN/Inf)
+    # clamp for preview
     img = np.nan_to_num(img, nan=0.0, posinf=0.0, neginf=0.0)
     img = np.maximum(img, 0.0)
 
@@ -455,7 +454,7 @@ def exr_to_preview_bgr8(exr_rgb_or_bgr: np.ndarray, gamma: float = 2.2):
     # 0..255
     img8 = np.clip(img * 255.0, 0, 255).astype(np.uint8)
 
-    # OpenCV lit souvent en BGR déjà; on laisse tel quel
+    
     return img8
 
 
