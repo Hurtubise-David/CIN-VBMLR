@@ -1,24 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-SPHEIRE Studio – Capture + Calibrate + Pose (Integrated)
-
-• Barre de menu en haut :
-  - File → Open Session / Capture Cam / Save Session
-  - Calibrate → Calibrate Mono / Calibrate Stereo (INTÉGRÉ)
-  - Pose Estimation → Live Pose / Pose Graph
-
-NOUVEAU :
-- Page "Calibrate Stereo" complète, intégrant le module de calibration damier
-  (capture stéréo side‑by‑side, détection des coins, empilement N paires,
-   calibration intrinsèque et stéréo, rectification + matrice Q, sauvegarde YAML).
-- Paramètre UI "Nombre de captures" (défaut 15), plus d'autres réglages utiles.
-
-Dépendances
+Dependancies
     pip install PyQt5 opencv-python numpy pyyaml psutil
-
-Note : Cette page ouvre sa propre VideoCapture. Fermez la page "Capture Cam"
-avant de calibrer si vous utilisez le même périphérique.
 """
 import os
 import sys
