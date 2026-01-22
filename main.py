@@ -23,6 +23,7 @@ import psutil
 import yaml
 import glob
 import re
+import torch
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
