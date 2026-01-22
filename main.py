@@ -812,6 +812,7 @@ class CaptureWorker(QtCore.QObject):
 
 class ExrSequencePage(QtWidgets.QWidget):
     status_msg = QtCore.pyqtSignal(str)
+    vda_submit = QtCore.pyqtSignal(object, float, str)  # frame, ts, key
 
     def __init__(self, parent=None, vda_wrapper=None):
         super().__init__(parent)
