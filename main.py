@@ -33,7 +33,7 @@ import sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "Video_Depth_Anything", "video_depth_anything"))
 sys.path.append(os.path.join(os.path.dirname(__file__), "Video_Depth_Anything"))
 
-from video_depth_stream import VideoDepthAnything as VDAStream
+from video_depth_stream import VideoDepthAnything
 
 # --- TBD: Live pose module ---
 try:
@@ -411,56 +411,39 @@ def exr_read_timecode(exr_path: str):
     except Exception:
         return None
 
-def build_vda_wrapper():
+def build_vda_wrapper(encoder: str = "vits"):
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    # --- Construct VDAStream ---
-    ctor = VDAStream
-    sig = None
+    model_configs = {
+        "vits": {"encoder": "vits", "features": 64,  "out_channels": [48, 96, 192, 384]},
+        "vitl": {"encoder": "vitl", "features": 256, "out_channels": [256, 512, 1024, 1024]},
+    }
+    if encoder not in model_configs:
+        raise ValueError(f"encoder must be one of {list(model_configs.keys())}")
+
+    ckpt = os.path.join(os.path.dirname(__file__), "checkpoints", f"video_depth_anything_{encoder}.pth")
+    if not os.path.isfile(ckpt):
+        raise FileNotFoundError(f"Missing checkpoint: {ckpt}")
+
+    # instantiate with the config
+    model = VideoDepthAnything(**model_configs[encoder])
+
+    # load weights
+    state = torch.load(ckpt, map_location="cpu")
+    model.load_state_dict(state, strict=True)
+
+    # move to device + eval
+    model = model.to(device).eval()
+
+    # tiny warmup (avoid first-frame lag / cuda init)
     try:
-        sig = inspect.signature(ctor)
+        dummy = np.zeros((256, 256, 3), dtype=np.uint8)
+        _ = model.infer_video_depth_one(dummy, input_size=256, device=device)
     except Exception:
         pass
 
-    # test arguments
-    candidates = [
-        {"encoder": "vits"},
-        {},  
-    ]
+    return VDAAdapter(model, device=device)
 
-    last_err = None
-    impl = None
-    for kw in candidates:
-        try:
-            if sig is not None:
-                # filter: take kwargs only supported
-                kw = {k: v for k, v in kw.items() if k in sig.parameters}
-            impl = ctor(**kw)
-            break
-        except TypeError as e:
-            last_err = e
-            continue
-
-    if impl is None:
-        raise RuntimeError(f"Impossible instance of VDAStream. Last error: {last_err}")
-
-    if hasattr(impl, "to"):
-        try: impl.to(device)
-        except Exception: pass
-
-    if hasattr(impl, "model"):
-        try: impl.model.to(device)
-        except Exception: pass
-
-    if hasattr(impl, "net"):
-        try: impl.net.to(device)
-        except Exception: pass
-
-    if hasattr(impl, "device"):
-        try: impl.device = device
-        except Exception: pass
-
-    return VDAAdapter(impl, device=device)
 
 
 def depth_to_vis_u8(depth: np.ndarray):
