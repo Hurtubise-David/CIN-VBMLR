@@ -546,9 +546,9 @@ class VideoWriterWorker(QtCore.QObject):
                     self.writer.write(frame)
                     self._written_frames += 1
                 except Exception as e:
-                    self.status_msg.emit(f"Writer: exception OpenCV — frame sautée ({e}).")
+                    self.status_msg.emit(f"Writer: exception OpenCV — frame skipped ({e}).")
                     continue
-        self.status_msg.emit(f"Writer: fini ({self._written_frames} frames, drops cumulés: {self._dropped_count}).")
+        self.status_msg.emit(f"Writer: finish ({self._written_frames} frames, cumul drops: {self._dropped_count}).")
 
 
 # ============================ Capture Worker ============================ #
@@ -585,14 +585,14 @@ class CaptureWorker(QtCore.QObject):
     def start(self):
         if self.running:
             return
-        self.status_msg.emit(f"Ouverture caméra {self.device_index}…")
+        self.status_msg.emit(f"Open camera {self.device_index}…")
         self.cap = cv2.VideoCapture(self.device_index, cv2.CAP_MSMF)
         if not self.cap.isOpened():
             self.cap.release(); self.cap = cv2.VideoCapture(self.device_index, cv2.CAP_DSHOW)
         if not self.cap.isOpened():
             self.cap.release(); self.cap = cv2.VideoCapture(self.device_index, cv2.CAP_ANY)
         if not self.cap or not self.cap.isOpened():
-            self.status_msg.emit("ERREUR: impossible d’ouvrir la caméra.")
+            self.status_msg.emit("ERROR: Impossible to open camera.")
             return
         self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, float(self.width))
         self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, float(self.height))
@@ -613,11 +613,11 @@ class CaptureWorker(QtCore.QObject):
             self.cap.grab()
         ok, _ = self.cap.read()
         if not ok:
-            self.status_msg.emit("ERREUR: caméra ouverte mais aucune image.")
+            self.status_msg.emit("ERROR: camera open but no image.")
             self.cap.release(); self.cap = None; return
         self.running = True
         self.frame_counter = 0
-        self.status_msg.emit("Caméra démarrée.")
+        self.status_msg.emit("Camera streaming.")
         QtCore.QTimer.singleShot(0, self._grab_loop)
 
     def _grab_loop(self):
@@ -652,7 +652,7 @@ class CaptureWorker(QtCore.QObject):
                 }
                 self.writer_worker.push((frame, meta))
         else:
-            self.status_msg.emit("ATTN: frame perdue.")
+            self.status_msg.emit("WARNING: frame lost.")
         QtCore.QTimer.singleShot(0, self._grab_loop)
 
     @QtCore.pyqtSlot()
@@ -660,7 +660,7 @@ class CaptureWorker(QtCore.QObject):
         self.running = False
         if self.cap is not None:
             self.cap.release(); self.cap = None
-        self.status_msg.emit("Caméra arrêtée.")
+        self.status_msg.emit("Camera stopped.")
 
 # ============================ EXR Worker ============================ #
 
@@ -672,8 +672,8 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         self.exr_dir = None
         self.exr_files = []
-        self.meta_rows_seq = []          # liste de rows (ordre CSV)
-        self.meta_rows_by_frame = {}     # dict[frame] -> row si colonne frame trouvée
+        self.meta_rows_seq = []          # list of rows (CSV order)
+        self.meta_rows_by_frame = {}     # dict[frame] -> row if col frame is found
         self.meta_clip_name = None
         self.meta_path = None
         self._exr_tc_cache = {}
@@ -699,7 +699,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.slider.valueChanged.connect(self.on_slider)
         left.addWidget(self.slider)
 
-        self.info_line = QtWidgets.QLabel("Aucune séquence EXR chargée.")
+        self.info_line = QtWidgets.QLabel("No EXR sequence loaded.")
         self.info_line.setStyleSheet("color:#9cf")
         left.addWidget(self.info_line)
 
@@ -711,9 +711,9 @@ class ExrSequencePage(QtWidgets.QWidget):
         g = QtWidgets.QGridLayout(box)
         r = 0
 
-        self.btn_open_exr = QtWidgets.QPushButton("Ouvrir dossier EXR…")
-        self.btn_open_csv = QtWidgets.QPushButton("Charger CSV Meta…")
-        self.btn_open_opti = QtWidgets.QPushButton("Charger OptiTrack CSV…")
+        self.btn_open_exr = QtWidgets.QPushButton("Open folder EXR…")
+        self.btn_open_csv = QtWidgets.QPushButton("Load CSV Meta…")
+        self.btn_open_opti = QtWidgets.QPushButton("Load OptiTrack CSV…")
         self.btn_open_opti.setEnabled(False)
         self.btn_open_csv.setEnabled(False)
         g.addWidget(self.btn_open_opti, r, 0, 1, 2); r += 1
@@ -721,7 +721,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         g.addWidget(self.btn_open_exr, r, 0, 1, 2); r += 1
         g.addWidget(self.btn_open_csv, r, 0, 1, 2); r += 1
 
-        g.addWidget(QtWidgets.QLabel("FPS lecture"), r, 0)
+        g.addWidget(QtWidgets.QLabel("Read FPS"), r, 0)
         self.fps_box = QtWidgets.QDoubleSpinBox()
         self.fps_box.setRange(1.0, 240.0)
         self.fps_box.setDecimals(3)
@@ -742,13 +742,13 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.meta_view.setMinimumHeight(220)
 
         right.addWidget(box)
-        right.addWidget(QtWidgets.QLabel("Métadonnées (frame courante)"))
+        right.addWidget(QtWidgets.QLabel("Metadatas (current frame)"))
         right.addWidget(self.meta_view)
 
-        # ---- Viewer 3D OptiTrack (dans le "grand vide" à droite) ----
+        # ---- Viewer 3D OptiTrack ----
         self.viewer3d = OptiTrack3DViewer(max_points=8000, mm_to_m=True)
         self.viewer3d.setMinimumHeight(260)
-        right.addWidget(self.viewer3d, 1)  # stretch=1 => prend tout l’espace restant
+        right.addWidget(self.viewer3d, 1)  # stretch=1 
 
         layout.addLayout(right, 2)
 
@@ -783,7 +783,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         self._build_opti_alignment_cache()
 
         nkeys = len(self.opti_by_base_tc)
-        msg = f"OptiTrack chargé: {self.opti_path.name} | baseTC={nkeys}"
+        msg = f"OptiTrack loaded: {self.opti_path.name} | baseTC={nkeys}"
         if self.opti_fps:
             msg += f" | fps≈{self.opti_fps:.3f}"
         if self.opti_subframes_per_frame:
@@ -801,9 +801,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
     def _pick_first(self, row: dict, keys):
         """
-        Retourne la 1re valeur non-vide/non '--' parmi plusieurs clés possibles.
-        Robuste à: BOM UTF-8, espaces, casse, et surtout aux headers dupliqués
-        (ex: Master TC et Master TC__2).
+        Return 1re value not empty '--' from many keys possible.
         """
         if not row:
             return None
