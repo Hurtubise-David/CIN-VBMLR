@@ -1378,12 +1378,12 @@ class ExrSequencePage(QtWidgets.QWidget):
         if row is not None:
             tc_meta = self._pick_first(row, ["Master TC", "Source TC", "Timecode", "Record TC", "TC"])
 
-        # --- À gauche: on veut le TC du EXR seulement ---
+        # --- LEft: TC from EXR only ---
         if tc_exr:
             panel_lines.append(f"TC {tc_exr}")
         else:
             panel_lines.append("TC (EXR absent)")
-            # si on veux un fallback visuel, décommente:
+            # if need visual fallback, uncomment:
             # panel_lines.append(f"TC (media) {tc_media}")
 
         # Lens / expo
@@ -1405,10 +1405,10 @@ class ExrSequencePage(QtWidgets.QWidget):
             panel_lines.append(" | ".join(bits2))
 
 
-        # Dessiner le panneau sombre en bas à gauche
+        # Draw black pannel left/down
         vis8 = self._draw_panel_bottom_left(vis8, panel_lines)
 
-        # -------------------- afficher l'image --------------------
+        # -------------------- Show image --------------------
         h, w = vis8.shape[:2]
         qimg = QtGui.QImage(vis8.data, w, h, vis8.strides[0], QtGui.QImage.Format.Format_BGR888)
 
@@ -1420,14 +1420,14 @@ class ExrSequencePage(QtWidgets.QWidget):
         # Info + meta
         name = Path(exr_path).name
 
-        # frame_num depuis le nom EXR (00000001 -> 1)
+        # frame_num from name EXR (00000001 -> 1)
         frame_num = self.exr_frame_nums[self.idx] if hasattr(self, "exr_frame_nums") else (self.idx + 1)
 
         self.info_line.setText(f"[{self.idx+1}/{len(self.exr_files)}] frame_num={frame_num}  |  {name}")
 
-        # --- Métadonnées: ne montrer QUE les champs lentille/expo importants ---
+        # --- Metadatas: Show only lens/expo importants ---
         IMPORTANT_FIELDS = [
-            # Lentille (prior / calib temps réel)
+            # Lens (prior / real time calib)
             "Lens Model",
             "Lens Serial Number",
             "Lens Focal Length",
@@ -1435,7 +1435,7 @@ class ExrSequencePage(QtWidgets.QWidget):
             "Lens Iris",
             "Lens Squeeze",
 
-            # Exposition (utile pour prior/validation)
+            # Exposition (prior/validation)
             "Exposure Time",
             "Shutter Angle",
             "Exposure Index ASA",
@@ -1453,7 +1453,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         if self.meta_rows_by_frame:
             row = self.meta_rows_by_frame.get(frame_num, None)
             if row is None:
-                row = self.meta_rows_by_frame.get(frame_num - 1, None)  # CSV parfois 0-index
+                row = self.meta_rows_by_frame.get(frame_num - 1, None)  # CSV can be 0-index
         if row is None and self.meta_rows_seq:
             if 1 <= frame_num <= len(self.meta_rows_seq):
                 row = self.meta_rows_seq[frame_num - 1]
@@ -1469,40 +1469,39 @@ class ExrSequencePage(QtWidgets.QWidget):
         tc_meta = None
         if row is not None:
             tc_meta = self._pick_first(row, ["Master TC", "Source TC", "Timecode", "Record TC", "TC"])
-        lines.append(f"TC (metadata): {tc_meta if tc_meta else '(absent du CSV pour cette frame)'}")
+        lines.append(f"TC (metadata): {tc_meta if tc_meta else '(absent from CSV for this frame)'}")
 
-        # 3) Différence ΔTC (meta - exr)
-        #    NOTE: on compare EXR vs metadata, pas vs tc_media
+        # 3) Difference ΔTC (meta - exr)
         if tc_exr and tc_meta:
             fps_nom = self._infer_nominal_fps()
             exr_frames  = self._smpte_to_frames(tc_exr, fps_nom)
             meta_frames = self._smpte_to_frames(tc_meta, fps_nom)
-            delta = meta_frames - exr_frames  # positif = meta en avance
+            delta = meta_frames - exr_frames  
 
-            # Affichage en frames + SMPTE signé
+            # Show in frames + SMPTE
             sign = "+" if delta >= 0 else "-"
             delta_abs = abs(delta)
             delta_tc = self._frames_to_smpte(delta_abs, fps_nom)
 
             lines.append(f"ΔTC (meta - exr): {sign}{delta} frames  ({sign}{delta_tc})")
         else:
-            lines.append("ΔTC (meta - exr): (impossible — TC EXR ou metadata manquant)")
+            lines.append("ΔTC (meta - exr): (impossible — TC EXR or metadata missing)")
 
-        # 4) OptiTrack (si chargé)
-        tc_ref = tc_exr or tc_meta  # on prend EXR sinon metadata
+        # 4) OptiTrack (if loaded)
+        tc_ref = tc_exr or tc_meta  # Take EXR if not metadata
         if tc_ref and self.opti_by_base_tc:
-            base_tc = str(tc_ref).split(".")[0].strip()  # EXR est sans .sf, mais safe
+            base_tc = str(tc_ref).split(".")[0].strip()  # EXR is without .sf, but safe
             samples = self.opti_by_base_tc.get(base_tc, None)
 
             if samples:
-                # choisir le subframe du milieu (stabilise l’affichage)
+                # choose subframe from middle
                 mid = samples[len(samples)//2]
                 sfpf = int(self.opti_subframes_per_frame or max(1, len(samples)))
 
                 opti_tc_full = f"{base_tc}.{int(mid['subframe']):02d}"
                 lines.append(f"TC (OptiTrack): {opti_tc_full}  ({len(samples)} échant./frame)")
 
-                # ΔTC opti - exr : ici exr est au subframe 0 par convention
+                # ΔTC opti - exr : exr is at subframe 0 per convention
                 delta_sf = int(mid["subframe"]) - 0
                 delta_frames = float(delta_sf) / float(sfpf) if sfpf > 0 else 0.0
                 sign = "+" if delta_sf >= 0 else "-"
@@ -1514,10 +1513,9 @@ class ExrSequencePage(QtWidgets.QWidget):
                 lines.append(f"Opti pos (mm): [{px:.3f}, {py:.3f}, {pz:.3f}]")
                 lines.append(f"Opti quat (x,y,z,w): [{qx:.6f}, {qy:.6f}, {qz:.6f}, {qw:.6f}]")
 
-                # --- push au viewer 3D ---
-                # --- NEW: trajectoire propre jusqu'à la frame courante + pose courante ---
+                # --- push to 3D viewer ---
                 if hasattr(self, "viewer3d") and self.viewer3d is not None:
-                    # 1) trajectoire = toutes les poses jusqu'à idx (anti-spaghetti)
+                    # 1) trajectory = all poses till idx
                     if hasattr(self, "opti_pose_by_exr_index") and self.opti_pose_by_exr_index:
                         pts = []
                         for k in range(0, self.idx + 1):
@@ -1525,15 +1523,15 @@ class ExrSequencePage(QtWidgets.QWidget):
                             pts.append(d["pos_mm"] if d else None)
                         self.viewer3d.set_trajectory_mm(pts, reset_origin=True)
 
-                    # 2) pose courante = point + frustum (si toggle)
+                    # 2) current pose = point + frustum (if toggle)
                     self.viewer3d.set_current_pose_mm(px, py, pz, qx, qy, qz, qw)
 
 
 
             else:
-                lines.append(f"TC (OptiTrack): (aucun échantillon pour {base_tc})")
+                lines.append(f"TC (OptiTrack): (no sample for {base_tc})")
         elif self.opti_by_base_tc and not tc_ref:
-            lines.append("TC (OptiTrack): (pas de TC EXR/metadata pour faire le match)")
+            lines.append("TC (OptiTrack): (no TC EXR/metadata for matching)")
 
         if row is not None:
             for k in IMPORTANT_FIELDS:
@@ -1545,7 +1543,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                             continue
                         lines.append(f"{k}: {v}")
 
-        meta_txt = "\n".join(lines) if lines else "(Aucun champ lentille/expo trouvé pour cette frame — CSV ok?)"
+        meta_txt = "\n".join(lines) if lines else "(No field lens/expo found for this frame — CSV ok?)"
         self.meta_view.setPlainText(meta_txt)
 
 
