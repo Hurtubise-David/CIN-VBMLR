@@ -57,8 +57,8 @@ except Exception:
             lay.addStretch(1); lay.addWidget(lbl); lay.addStretch(1)
 
 # --- Branding / Logo ---
-APP_NAME = "SPHEIRE Studio"
-LOGO_CANDIDATES = ["spheire_logo.png", "spheire_logo.jpg", "spheire_logo.jpeg"]
+APP_NAME = "CIN-VBMLR"
+LOGO_CANDIDATES = ["CIN_logo.png""]
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 
