@@ -411,6 +411,15 @@ def exr_read_timecode(exr_path: str):
     except Exception:
         return None
 
+def build_vda_wrapper():
+    # (encoder, fp16, device)
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    vda = VideoDepthAnything(
+        encoder="vits",        # or "vitl"
+        device=device,
+        fp16=(device == "cuda")
+    )
+    return vda
 
 
 def frame_num_from_exr_filename(exr_path: str) -> int:
@@ -2358,6 +2367,8 @@ class AppWindow(QtWidgets.QMainWindow):
         self.page_live_pose = LivePosePage(self)
         self.page_pose_graph = PlaceholderPage("Pose Graph", "Visualisation du graphe de poses.")
         self.page_exr = ExrSequencePage(self)
+        self.vda_wrapper = build_vda_wrapper()
+        self.page_exr = ExrSequencePage(vda_wrapper=self.vda_wrapper)
 
 
         for p in (self.capture_page, self.page_calib_mono, self.page_calib_stereo, self.page_live_pose, self.page_pose_graph, self.page_exr):
@@ -2397,15 +2408,6 @@ class AppWindow(QtWidgets.QMainWindow):
         act_live.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_live_pose))
         act_graph.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_pose_graph))
 
-    def build_vda_wrapper():
-        # (encoder, fp16, device)
-        device = "cuda" if torch.cuda.is_available() else "cpu"
-        vda = VideoDepthAnything(
-            encoder="vitl",        # or "vits"/"vitb"
-            device=device,
-            fp16=(device == "cuda")
-        )
-        return vda
 
     # ----- File actions ----- #
     def on_open_exr_sequence(self):
