@@ -719,7 +719,7 @@ class CaptureWorker(QtCore.QObject):
 class ExrSequencePage(QtWidgets.QWidget):
     status_msg = QtCore.pyqtSignal(str)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, vda_wrapper=None):
         super().__init__(parent)
 
         self.exr_dir = None
