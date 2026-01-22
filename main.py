@@ -1558,6 +1558,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
                 # memorize current request
                 self._last_req_key = cache_key
+                self.vda_submit.emit(bgr8_for_vda, time.time(), cache_key)
 
                 # submit async (ts = time.time())
                 QtCore.QMetaObject.invokeMethod(
