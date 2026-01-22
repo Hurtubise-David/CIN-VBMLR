@@ -421,9 +421,11 @@ def build_vda_wrapper(encoder: str = "vits"):
     if encoder not in model_configs:
         raise ValueError(f"encoder must be one of {list(model_configs.keys())}")
 
-    ckpt = os.path.join(os.path.dirname(__file__), "checkpoints", f"video_depth_anything_{encoder}.pth")
+    root = os.path.dirname(__file__)
+    ckpt = os.path.join(root, "Video_Depth_Anything", "checkpoints", f"video_depth_anything_{encoder}.pth")
     if not os.path.isfile(ckpt):
         raise FileNotFoundError(f"Missing checkpoint: {ckpt}")
+
 
     # instantiate with the config
     model = VideoDepthAnything(**model_configs[encoder])
