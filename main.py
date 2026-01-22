@@ -544,10 +544,24 @@ class VDAAdapter:
     def __init__(self, impl, device: str):
         self.impl = impl
         self.device = device
+        self._fixed_hw = None  # (h, w) for streaming consistency
+
+    def reset_stream_size(self):
+        self._fixed_hw = None
 
     @torch.no_grad()
     def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
         frame_bgr = np.ascontiguousarray(frame_bgr)
+
+        # --- enforce constant H,W for VDA streaming ---
+        h0, w0 = frame_bgr.shape[:2]
+        if self._fixed_hw is None:
+            self._fixed_hw = (h0, w0)
+        else:
+            hf, wf = self._fixed_hw
+            if (h0, w0) != (hf, wf):
+                frame_bgr = cv2.resize(frame_bgr, (wf, hf), interpolation=cv2.INTER_AREA)
+                frame_bgr = np.ascontiguousarray(frame_bgr)
 
         if hasattr(self.impl, "infer_video_depth_one"):
             rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
@@ -556,7 +570,6 @@ class VDAAdapter:
                 depth = depth.detach().float().cpu().numpy()
             return np.asarray(depth, dtype=np.float32).squeeze()
 
-        # 2) Fallback 
         if hasattr(self.impl, "infer"):
             depth = self.impl.infer(frame_bgr)
             if torch.is_tensor(depth):
@@ -564,6 +577,7 @@ class VDAAdapter:
             return np.asarray(depth, dtype=np.float32).squeeze()
 
         raise AttributeError("VDA backend: no method infer_video_depth_one / infer found.")
+
 
 
 
