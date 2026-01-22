@@ -1495,6 +1495,7 @@ class ExrSequencePage(QtWidgets.QWidget):
             return
 
         exr_path = self.exr_files[self.idx]
+        name = Path(exr_path).name
 
         # --- TC EXR cache ---
         tc_exr = self._exr_tc_cache.get(exr_path)
