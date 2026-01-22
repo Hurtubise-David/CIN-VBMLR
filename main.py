@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Dependancies
-    pip install PyQt5 opencv-python numpy pyyaml psutil
+    pip install PyQt5 opencv-python numpy pyyaml psutil pyqtgraph PyOpenGL
 """
 import os
 import sys
@@ -35,11 +35,11 @@ sys.path.append(os.path.join(os.path.dirname(__file__), "Video_Depth_Anything"))
 from video_depth_stream import VideoDepthAnything
 
 
-# --- Module de pose live si présent dans votre projet ---
+# --- TBD: Live pose module ---
 try:
     from live_pose_page import LivePosePage
 except Exception:
-    # Fallback placeholder si le module n'est pas présent
+    # Fallback placeholder if module is not available
     class LivePosePage(QtWidgets.QWidget):
         def __init__(self, parent=None):
             super().__init__(parent)
@@ -71,7 +71,6 @@ def exr_dump_header(exr_path: str, max_keys: int = 80):
         for k in keys[:max_keys]:
             v = hdr[k]
             t = type(v).__name__
-            # éviter d'imprimer 3000 chars
             s = str(v)
             if len(s) > 200:
                 s = s[:200] + "..."
@@ -83,7 +82,7 @@ def exr_dump_header(exr_path: str, max_keys: int = 80):
     except Exception as e:
         print(f"[EXR] header dump error: {e}")
 
-# --- 3D viewer rapide (OpenGL) ---
+# --- 3D viewer (OpenGL) ---
 try:
     import pyqtgraph as pg
     import pyqtgraph.opengl as gl
@@ -93,14 +92,6 @@ except Exception:
 
 
 class OptiTrack3DViewer(QtWidgets.QWidget):
-    """
-    Viewer 3D ultra-léger:
-    - affiche une grille
-    - affiche une trajectoire (polyline)
-    - affiche le point courant (scatter)
-    - (NEW) possibilité de "rejouer" la trajectoire jusqu’à une frame (anti-spaghetti)
-    - (NEW) frustum caméra toggle + mise à jour avec quaternion
-    """
 
     def __init__(self, parent=None, max_points=5000, mm_to_m=True):
         super().__init__(parent)
@@ -2335,7 +2326,7 @@ class AppWindow(QtWidgets.QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle(f"{APP_NAME} — Capture / Calibrate / Pose")
-        # Icône de fenêtre = logo SPHEIRE si dispo
+        # Window icon = logo if available
         try:
             _lp = find_logo_path()
             if _lp:
