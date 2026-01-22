@@ -1372,6 +1372,11 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.idx = int(v)
         self._render_current()
 
+    def _on_toggle_vda(self, on: bool):
+        self.vda_enabled = bool(on) and (self.vda_worker is not None)
+        self._render_current()
+
+
     # ---------- Render ----------
     def _render_current(self):
         if not self.exr_files:
