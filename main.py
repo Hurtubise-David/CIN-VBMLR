@@ -508,6 +508,35 @@ class Timecode:
         dt = datetime.fromtimestamp(ts).astimezone()
         ff = int(((ts - int(ts)) * self.fps) + 1e-6)
         return f"{dt:%H:%M:%S}:{ff:02d}"
+    
+class VDAAdapter:
+    """
+    Normalise API VDA : expose infer(frame_bgr)->depth float32 HxW
+    """
+    def __init__(self, impl, device: str):
+        self.impl = impl
+        self.device = device
+
+    @torch.no_grad()
+    def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
+        # 1) API idéale : impl.infer(bgr)->depth
+        if hasattr(self.impl, "infer"):
+            depth = self.impl.infer(frame_bgr)
+            if torch.is_tensor(depth):
+                depth = depth.detach().float().cpu().numpy()
+            return np.asarray(depth, dtype=np.float32)
+
+        # 2) API “model-like” : infer_video_depth_one(rgb, input_size, device)
+        if hasattr(self.impl, "infer_video_depth_one"):
+            rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+            depth = self.impl.infer_video_depth_one(rgb, input_size=518, device=self.device)
+            if torch.is_tensor(depth):
+                depth = depth.detach().float().cpu().numpy()
+            depth = np.asarray(depth, dtype=np.float32)
+            return depth.squeeze()
+
+        raise AttributeError("VDA backend: aucune méthode infer/infer_video_depth_one trouvée.")
+
 
 
 # ============================ Writer Worker ============================ #
