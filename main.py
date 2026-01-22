@@ -1549,18 +1549,10 @@ class ExrSequencePage(QtWidgets.QWidget):
                         interpolation=cv2.INTER_AREA
                     )
 
-                # memorize current request
+                # submit async (only once via QueuedConnection)
+                ts = time.time()
                 self._last_req_key = cache_key
-                self.vda_submit.emit(bgr8_for_vda, time.time(), cache_key)
-
-                # submit async (ts = time.time())
-                QtCore.QMetaObject.invokeMethod(
-                    self.vda_worker,
-                    "submit",
-                    QtCore.Qt.QueuedConnection,
-                    QtCore.Q_ARG(np.ndarray, bgr8_for_vda),
-                    QtCore.Q_ARG(float, float(time.time()))
-                )
+                self.vda_submit.emit(bgr8_for_vda, ts, cache_key)
 
                 # fallback: show RGB preview during compute
                 vis8 = exr_to_preview_bgr8(exr3)
