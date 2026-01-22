@@ -1429,6 +1429,51 @@ class ExrSequencePage(QtWidgets.QWidget):
         else:
             exr3 = exr
 
+        # --- build key cache (per path) ---
+        cache_key = str(exr_path)
+
+        # --- VDA path: request depth async ---
+        if self.vda_enabled and self.vda_worker is not None:
+            depth = self.depth_cache.get(cache_key, None)
+
+            # if not in cach: submit job to worker
+            if depth is None:
+                # image for VDA (downscale VDA)
+                bgr8_for_vda = exr_float_to_vda_bgr8(exr3)
+                ds = float(self.vda_downscale.value())
+                if ds < 0.999:
+                    h1, w1 = bgr8_for_vda.shape[:2]
+                    bgr8_for_vda = cv2.resize(
+                        bgr8_for_vda,
+                        (max(16, int(w1*ds)), max(16, int(h1*ds))),
+                        interpolation=cv2.INTER_AREA
+                    )
+
+                # memorize current request
+                self._last_req_key = cache_key
+
+                # submit async (ts = time.time())
+                QtCore.QMetaObject.invokeMethod(
+                    self.vda_worker,
+                    "submit",
+                    QtCore.Qt.QueuedConnection,
+                    QtCore.Q_ARG(np.ndarray, bgr8_for_vda),
+                    QtCore.Q_ARG(float, float(time.time()))
+                )
+
+                # fallback: show RGB preview during compute
+                vis8 = exr_to_preview_bgr8(exr3)
+                vis8 = self._draw_panel_bottom_left(vis8, panel_lines + ["VDA: computing..."])
+            else:
+                # depth ready -> show depth
+                vis8 = depth_to_vis_u8(depth)
+                vis8 = self._draw_panel_bottom_left(vis8, panel_lines + ["VDA: ON"])
+        else:
+            # normal RGB
+            vis8 = exr_to_preview_bgr8(exr3)
+            vis8 = self._draw_panel_bottom_left(vis8, panel_lines)
+
+
         # >>> downscale for preview (ex: width max 1600)
         max_w = 1600
         h0, w0 = exr3.shape[:2]
