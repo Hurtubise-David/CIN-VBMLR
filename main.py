@@ -802,6 +802,25 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.btn_prev = QtWidgets.QPushButton("◀ Frame")
         self.btn_next = QtWidgets.QPushButton("Frame ▶")
 
+        self.chk_vda = QtWidgets.QCheckBox("View VDA (Depth)")
+        self.chk_vda.setChecked(False)
+
+        self.chk_vda_cache = QtWidgets.QCheckBox("Cache depth")
+        self.chk_vda_cache.setChecked(True)
+
+        g.addWidget(self.chk_vda, r, 0, 1, 2); r += 1
+        g.addWidget(self.chk_vda_cache, r, 0, 1, 2); r += 1
+
+        g.addWidget(QtWidgets.QLabel("VDA downscale"), r, 0)
+        self.vda_downscale = QtWidgets.QDoubleSpinBox()
+        self.vda_downscale.setRange(0.10, 1.00)
+        self.vda_downscale.setSingleStep(0.10)
+        self.vda_downscale.setValue(0.50)
+        g.addWidget(self.vda_downscale, r, 1); r += 1
+
+        self.chk_vda.toggled.connect(self._on_toggle_vda)
+
+
         g.addWidget(self.btn_play, r, 0); g.addWidget(self.btn_stop, r, 1); r += 1
         g.addWidget(self.btn_prev, r, 0); g.addWidget(self.btn_next, r, 1); r += 1
 
