@@ -2061,7 +2061,7 @@ class CalibrateStereoPage(QtWidgets.QWidget):
             self.log_append(f"ERREUR écriture YAML: {e}")
 
 
-# ============================ CaptureCam Page (existant) ============================ #
+# ============================ CaptureCam Page ============================ #
 class CaptureCamPage(QtWidgets.QWidget):
     status_msg = QtCore.pyqtSignal(str)
 
@@ -2264,7 +2264,7 @@ class CaptureCamPage(QtWidgets.QWidget):
             # Activer file côté capture
             self.capture_worker.recording = True
             del self._pending_paths
-            self.status_line.setText(f"Enregistrement → {self.writer_worker.video_path.name} (codec {self.writer_worker.fourcc_used}).")
+            self.status_line.setText(f"Save → {self.writer_worker.video_path.name} (codec {self.writer_worker.fourcc_used}).")
 
         # Snapshot
         if getattr(self, "_do_snapshot", False):
