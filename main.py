@@ -2552,7 +2552,7 @@ class AppWindow(QtWidgets.QMainWindow):
         self.page_calib_stereo = CalibrateStereoPage(self)  # <<< intégré
         self.page_live_pose = LivePosePage(self)
         self.page_pose_graph = PlaceholderPage("Pose Graph", "Visualisation du graphe de poses.")
-        self.page_exr = ExrSequencePage(self)
+
         self.vda_wrapper = build_vda_wrapper()
         self.page_exr = ExrSequencePage(vda_wrapper=self.vda_wrapper)
 
