@@ -1510,7 +1510,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                 f"Error reading EXR:\n{Path(exr_path).name}\n\n"
                 f"(Validate OPENCV_IO_ENABLE_OPENEXR=1)"
             )
-            self.info_line.setText(f"[{self.idx+1}/{len(self.exr_files)}] frame_num={frame_num}  |  {Path(exr_path).name}")
+            self.frame_line.setText(f"[{self.idx+1}/{len(self.exr_files)}] frame_num={frame_num}  |  {name}")
             return
 
         # EXR -> exr3
