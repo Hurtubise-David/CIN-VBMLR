@@ -1,0 +1,13 @@
+# --- Models and weight ---
+*.pth
+*.ckpt
+*.onnx
+*.safetensors
+Video_Depth_Anything/checkpoints/
+
+# --- Python & System ---
+__pycache__/
+*.py[cod]
+.DS_Store
+.env
+.vscode/
