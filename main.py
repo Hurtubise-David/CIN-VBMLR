@@ -1796,7 +1796,16 @@ class ExrSequencePage(QtWidgets.QWidget):
 
 
     def _status(self, msg: str):
-        self.info_line.setText(msg)
+        
+        self.status_line.setText(msg)
+
+        # log 
+        ts = datetime.now().strftime("%H:%M:%S")
+        self.log.appendPlainText(f"[{ts}] {msg}")
+
+        # terminal
+        print(msg)
+
 
 
 
