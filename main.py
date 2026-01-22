@@ -421,6 +421,28 @@ def build_vda_wrapper():
     )
     return vda
 
+def depth_to_vis_u8(depth: np.ndarray):
+    """depth float32 -> BGR uint8 for show."""
+    if depth is None:
+        return None
+    d = np.nan_to_num(depth, nan=0.0, posinf=0.0, neginf=0.0).astype(np.float32)
+    # normalisation
+    lo = np.percentile(d, 2.0)
+    hi = np.percentile(d, 98.0)
+    if hi <= lo + 1e-6:
+        hi = lo + 1.0
+    dn = np.clip((d - lo) / (hi - lo), 0.0, 1.0)
+    u8 = (dn * 255.0).astype(np.uint8)
+    # colormap
+    vis = cv2.applyColorMap(u8, cv2.COLORMAP_TURBO)
+    return vis
+
+def exr_float_to_vda_bgr8(exr3: np.ndarray, gamma=2.2):
+    """
+    Convert EXR linear float (BGR/RGB) -> BGR uint8 for VDA.
+    """
+    bgr8 = exr_to_preview_bgr8(exr3, gamma=gamma) 
+    return bgr8
 
 def frame_num_from_exr_filename(exr_path: str) -> int:
     """
