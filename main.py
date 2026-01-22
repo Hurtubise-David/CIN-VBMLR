@@ -1629,7 +1629,9 @@ class ExrSequencePage(QtWidgets.QWidget):
 
 
         # Draw black pannel left/down
-        vis8 = self._draw_panel_bottom_left(vis8, panel_lines)
+        if not (self.vda_enabled and self.vda_worker is not None):
+            vis8 = self._draw_panel_bottom_left(vis8, panel_lines)
+
 
         # -------------------- Show image --------------------
         h, w = vis8.shape[:2]
