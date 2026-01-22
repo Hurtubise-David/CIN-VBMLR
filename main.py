@@ -655,26 +655,25 @@ class VideoWriterWorker(QtCore.QObject):
 
 # ============================ Capture Worker ============================ #
 class VDAWorker(QtCore.QObject):
-    depth_ready = QtCore.pyqtSignal(np.ndarray, float)  # depth, timestamp
+    depth_ready = QtCore.pyqtSignal(object, float, str)  # depth, ts, key
     status_msg = QtCore.pyqtSignal(str)
 
     def __init__(self, vda_wrapper):
         super().__init__()
         self.vda = vda_wrapper
         self._lock = threading.Lock()
-        self._latest = None
+        self._latest = None   # (frame, ts, key)
         self._stop = False
 
-    @QtCore.pyqtSlot(np.ndarray, float)
-    def submit(self, frame_bgr, ts):
+    @QtCore.pyqtSlot(object, float, str)
+    def submit(self, frame_bgr, ts, key):
         with self._lock:
-            self._latest = (frame_bgr.copy(), ts)
+            self._latest = (np.ascontiguousarray(frame_bgr), float(ts), str(key))
 
     @QtCore.pyqtSlot()
     def run_loop(self):
         self.status_msg.emit("VDA: worker start")
         while not self._stop:
-            item = None
             with self._lock:
                 item = self._latest
                 self._latest = None
@@ -682,10 +681,10 @@ class VDAWorker(QtCore.QObject):
                 time.sleep(0.002)
                 continue
 
-            frame_bgr, ts = item
+            frame_bgr, ts, key = item
             try:
-                depth = self.vda.infer(frame_bgr)  # float32 HxW
-                self.depth_ready.emit(depth, ts)
+                depth = self.vda.infer(frame_bgr)
+                self.depth_ready.emit(depth, ts, key)
             except Exception as e:
                 self.status_msg.emit(f"VDA error: {e}")
 
@@ -694,6 +693,8 @@ class VDAWorker(QtCore.QObject):
     @QtCore.pyqtSlot()
     def stop(self):
         self._stop = True
+
+
 
 
 
