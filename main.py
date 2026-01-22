@@ -857,6 +857,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.frame_line = QtWidgets.QLabel("No EXR sequence loaded.")
         self.frame_line.setStyleSheet("color:#9cf")
         left.addWidget(self.frame_line)
+        self.info_line = self.frame_line
 
         self.status_line = QtWidgets.QLabel("")
         self.status_line.setStyleSheet("color:#0f0")
