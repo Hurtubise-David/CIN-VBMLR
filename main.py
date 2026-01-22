@@ -1346,6 +1346,26 @@ class ExrSequencePage(QtWidgets.QWidget):
                 "n_samples": int(len(samples)),
             }
 
+    # ---------- VDA Cache ----------
+    @QtCore.pyqtSlot(np.ndarray, float)
+    def _on_vda_depth_ready(self, depth: np.ndarray, ts: float):
+        # Depth received from last request
+        key = self._last_req_key
+        if not key:
+            return
+
+        if self.chk_vda_cache.isChecked():
+            self.depth_cache[key] = depth
+        else:
+            # no cache: temporally take
+            self.depth_cache = {key: depth}
+
+        # if still on frame, redraw
+        cur_key = str(self.exr_files[self.idx]) if self.exr_files else None
+        if cur_key == key and self.vda_enabled:
+            self._render_current()
+
+
     # ---------- Playback ----------
     def toggle_play(self):
         if not self.exr_files:
