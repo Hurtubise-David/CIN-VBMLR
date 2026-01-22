@@ -519,7 +519,7 @@ class VDAAdapter:
 
     @torch.no_grad()
     def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
-        # 1) API idéale : impl.infer(bgr)->depth
+        # 1) API: impl.infer(bgr)->depth
         if hasattr(self.impl, "infer"):
             depth = self.impl.infer(frame_bgr)
             if torch.is_tensor(depth):
@@ -535,7 +535,7 @@ class VDAAdapter:
             depth = np.asarray(depth, dtype=np.float32)
             return depth.squeeze()
 
-        raise AttributeError("VDA backend: aucune méthode infer/infer_video_depth_one trouvée.")
+        raise AttributeError("VDA backend: no method infer/infer_video_depth_one found.")
 
 
 
