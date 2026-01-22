@@ -2397,6 +2397,16 @@ class AppWindow(QtWidgets.QMainWindow):
         act_live.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_live_pose))
         act_graph.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_pose_graph))
 
+    def build_vda_wrapper():
+        # (encoder, fp16, device)
+        device = "cuda" if torch.cuda.is_available() else "cpu"
+        vda = VideoDepthAnything(
+            encoder="vitl",        # or "vits"/"vitb"
+            device=device,
+            fp16=(device == "cuda")
+        )
+        return vda
+
     # ----- File actions ----- #
     def on_open_exr_sequence(self):
         self.stack.setCurrentWidget(self.page_exr)
