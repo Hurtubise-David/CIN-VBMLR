@@ -27,6 +27,13 @@ import torch
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
+# --- VDA paths ---
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), "Video_Depth_Anything", "video_depth_anything"))
+sys.path.append(os.path.join(os.path.dirname(__file__), "Video_Depth_Anything"))
+
+from video_depth_stream import VideoDepthAnything
+
 
 # --- Module de pose live si présent dans votre projet ---
 try:
