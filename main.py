@@ -1034,7 +1034,7 @@ class ExrSequencePage(QtWidgets.QWidget):
             raw_headers = next(reader, [])
             headers = uniquify_headers(raw_headers)
 
-            # Heuristique: colonne frame plausible
+            # col frame available
             frame_col = None
             priority = ["Frame", "frame", "Index", "index", "Frame Number", "Frame Num", "Frame#", "frame_idx"]
             for p in priority:
@@ -1054,7 +1054,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                 if not row_vals:
                     continue
 
-                # pad si row plus courte
+                # pad if row shorter
                 if len(row_vals) < len(headers):
                     row_vals = row_vals + [""] * (len(headers) - len(row_vals))
 
@@ -1065,7 +1065,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
                 meta_rows_seq.append(clean_row)
 
-                # Clip name (première ligne non vide trouvée)
+                # Clip name
                 if clip_name is None:
                     for k in ["Camera Clip Name", "Clip Name", "Clip", "Source Clip Name", "Name"]:
                         v = self._pick_first(clean_row, [k])
@@ -1073,7 +1073,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                             clip_name = v
                             break
 
-                # Indexation par frame
+                # Index per frame
                 if frame_col is not None:
                     vfi = clean_row.get(frame_col, "")
                     if vfi != "":
@@ -1088,18 +1088,6 @@ class ExrSequencePage(QtWidgets.QWidget):
     def _parse_optitrack_csv(self, csv_path: Path):
         """
         Parse CSV OptiTrack (Motive Take export).
-        Attend la vraie header: Frame,Time (Seconds),TimeCode,...
-        On lit seulement les 10 premières colonnes utiles:
-        0 Frame
-        1 Time (Seconds)
-        2 TimeCode (HH:MM:SS:FF.sf)
-        3-6 quaternion x,y,z,w
-        7-9 position x,y,z (mm)
-        Retour:
-        by_base_tc: dict[str, list[dict]]
-        fps_est: float
-        subframes_per_frame: int (souvent 5 si 120Hz sur TC 24)
-        tc_start, tc_end
         """
         import statistics
 
@@ -1109,7 +1097,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         tc_end = None
 
         with open(csv_path, "r", encoding="utf-8", errors="replace", newline="") as f:
-            # Avancer jusqu’à la vraie ligne header
+            # Forward to line header
             header = None
             while True:
                 line = f.readline()
@@ -1127,7 +1115,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                 if not row or len(row) < 10:
                     continue
 
-                # champs
+                # fields
                 try:
                     tsec = float(row[1])
                 except Exception:
@@ -1171,7 +1159,7 @@ class ExrSequencePage(QtWidgets.QWidget):
                     tc_start = tc_full
                 tc_end = tc_full
 
-        # Estimer FPS via Time(Seconds)
+        # Estimate FPS via Time(Seconds)
         fps_est = None
         if len(times) >= 3:
             dts = [times[i+1] - times[i] for i in range(len(times)-1) if (times[i+1] - times[i]) > 0]
@@ -1180,19 +1168,19 @@ class ExrSequencePage(QtWidgets.QWidget):
                 if med > 0:
                     fps_est = 1.0 / med
 
-        # subframes_per_frame = max count observé par base_tc (souvent 5)
+        # subframes_per_frame = max count observed per base_tc
         subframes_per_frame = None
         if by_base:
             subframes_per_frame = max(len(v) for v in by_base.values())
 
-        # Trier chaque liste par subframe (important)
+        # Sort each list per subframe
         for k in list(by_base.keys()):
             by_base[k].sort(key=lambda x: x["subframe"])
 
         return by_base, fps_est, subframes_per_frame, tc_start, tc_end
     
     def _get_tc_for_exr_index(self, i: int):
-        """Retourne un TC de référence pour l'index EXR i (EXR TC si présent sinon CSV meta)."""
+        """Return a TC reference for index EXR i (EXR TC if available if not CSV meta)."""
         if not self.exr_files or i < 0 or i >= len(self.exr_files):
             return None
 
@@ -1201,7 +1189,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         if tc_exr:
             return tc_exr
 
-        # fallback meta CSV (si dispo)
+        # fallback meta CSV (if available)
         frame_num = self.exr_frame_nums[i] if hasattr(self, "exr_frame_nums") else (i + 1)
         row = None
         if self.meta_rows_by_frame:
@@ -1220,12 +1208,9 @@ class ExrSequencePage(QtWidgets.QWidget):
 
     def _build_opti_alignment_cache(self):
         """
-        Pré-calcule pour chaque frame EXR i:
-          - position mm (mid subframe) ou None
-          - quaternion (mid subframe) ou None
-        Ça permet:
-          - scrub => trajectoire recalculée jusqu’à i (anti-spaghetti)
-          - lecture => update propre et stable
+        Pre-compute for each frame EXR i:
+          - position mm (mid subframe) or None
+          - quaternion (mid subframe) or None
         """
         self.opti_pose_by_exr_index = [None] * (len(self.exr_files) if self.exr_files else 0)
 
@@ -1250,8 +1235,6 @@ class ExrSequencePage(QtWidgets.QWidget):
                 "subframe": int(mid.get("subframe", 0)),
                 "n_samples": int(len(samples)),
             }
-    
-
 
     # ---------- Playback ----------
     def toggle_play(self):
@@ -1304,7 +1287,7 @@ class ExrSequencePage(QtWidgets.QWidget):
     # ---------- Render ----------
     def _render_current(self):
         if not self.exr_files:
-            self.preview.setText("Aucune séquence EXR chargée.")
+            self.preview.setText("No EXR sequence loaded.")
             return
 
         exr_path = self.exr_files[self.idx]
@@ -1313,19 +1296,19 @@ class ExrSequencePage(QtWidgets.QWidget):
             tc_exr = exr_read_timecode(exr_path)
             self._exr_tc_cache[exr_path] = tc_exr
 
-        # frame_num depuis le nom EXR (00000001 -> 1) AVANT usage
+        # frame_num from EXR (00000001 -> 1) before usage
         frame_num = self.exr_frame_nums[self.idx] if hasattr(self, "exr_frame_nums") else (self.idx + 1)
 
         exr = cv2.imread(exr_path, cv2.IMREAD_UNCHANGED)
         if exr is None:
             self.preview.setText(
-                f"Erreur lecture EXR:\n{Path(exr_path).name}\n\n"
-                f"(Vérifie OPENCV_IO_ENABLE_OPENEXR=1)"
+                f"Error reading EXR:\n{Path(exr_path).name}\n\n"
+                f"(Validate OPENCV_IO_ENABLE_OPENEXR=1)"
             )
             self.info_line.setText(f"[{self.idx+1}/{len(self.exr_files)}] frame_num={frame_num}  |  {Path(exr_path).name}")
             return
 
-        # EXR peut arriver en float16/float32, parfois 4 canaux
+        # EXR in float16/float32, 4 channel
         if exr.ndim == 3 and exr.shape[2] >= 3:
             exr3 = exr[:, :, :3]
         else:
@@ -1337,7 +1320,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         else:
             exr3 = exr
 
-        # >>> downscale pour preview (ex: largeur max 1600)
+        # >>> downscale for preview (ex: width max 1600)
         max_w = 1600
         h0, w0 = exr3.shape[:2]
         if w0 > max_w:
@@ -1346,24 +1329,24 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         vis8 = exr_to_preview_bgr8(exr3)
         if vis8 is None:
-            self.preview.setText("Erreur: conversion preview EXR.")
+            self.preview.setText("Error: conversion preview EXR.")
             return
 
-        # -------------------- chercher la row meta de la frame --------------------
+        # -------------------- search row meta of the frame --------------------
         frame_num = self.exr_frame_nums[self.idx] if hasattr(self, "exr_frame_nums") else (self.idx + 1)
 
         row = None
         if self.meta_rows_by_frame:
             row = self.meta_rows_by_frame.get(frame_num, None)
             if row is None:
-                row = self.meta_rows_by_frame.get(frame_num - 1, None)  # CSV parfois 0-index
+                row = self.meta_rows_by_frame.get(frame_num - 1, None)  # CSV can be 0-index
         if row is None and self.meta_rows_seq:
             if 1 <= frame_num <= len(self.meta_rows_seq):
                 row = self.meta_rows_seq[frame_num - 1]
             elif 0 <= self.idx < len(self.meta_rows_seq):
                 row = self.meta_rows_seq[self.idx]
 
-        # -------------------- construire les lignes du panneau bas-gauche --------------------
+        # -------------------- construct lines for left-down pannel --------------------
         exr_prefix = Path(exr_path).name.split(".")[0]
         clip_name = None
         if row is not None:
@@ -1373,8 +1356,8 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         fps_nom = self._infer_nominal_fps()
 
-        # --- TC "media" = timecode dérivé de la position (frame_num) + fps nominal ---
-        # 00:00:00:00 au frame 1 (donc frame_num-1 en frames)
+        # --- TC "media" = timecode from position (frame_num) + fps nominal ---
+        # 00:00:00:00 at frame 1 (so frame_num-1 in frames)
         tc_media = self._frames_to_smpte(max(0, frame_num - 1), fps_nom)
 
         # lens infos
@@ -1390,7 +1373,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         panel_lines.append(f"{clip_name}")
         panel_lines.append(f"Frame {frame_num:06d} / {len(self.exr_files)}")
 
-        # TC metadata si présent (CSV)
+        # TC metadata if available (CSV)
         tc_meta = None
         if row is not None:
             tc_meta = self._pick_first(row, ["Master TC", "Source TC", "Timecode", "Record TC", "TC"])
