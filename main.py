@@ -1556,7 +1556,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 # ============================ Metadata Panel ============================ #
 class MetadataPanel(QtWidgets.QGroupBox):
     def __init__(self):
-        super().__init__("Métadonnées session / dataset")
+        super().__init__("Metadatas session / dataset")
         grid = QtWidgets.QGridLayout(self)
         r = 0
         # IDs
@@ -1566,12 +1566,12 @@ class MetadataPanel(QtWidgets.QGroupBox):
         grid.addWidget(QtWidgets.QLabel("video_id"), r, 0); grid.addWidget(self.video_id, r, 1); r += 1
         grid.addWidget(QtWidgets.QLabel("scene_id"), r, 0); grid.addWidget(self.scene_id, r, 1); r += 1
         grid.addWidget(QtWidgets.QLabel("take_id"), r, 0); grid.addWidget(self.take_id, r, 1); r += 1
-        # Mouvement / vitesse
+        # Movement / speed
         self.mouvement_cam = QtWidgets.QLineEdit("fix")
-        self.vitesse_cam = QtWidgets.QComboBox(); self.vitesse_cam.addItems(["", "lente", "normale", "rapide"]) ; self.vitesse_cam.setCurrentText("normale")
+        self.vitesse_cam = QtWidgets.QComboBox(); self.vitesse_cam.addItems(["", "slow", "normal", "fast"]) ; self.vitesse_cam.setCurrentText("normale")
         grid.addWidget(QtWidgets.QLabel("mouvement_cam"), r, 0); grid.addWidget(self.mouvement_cam, r, 1); r += 1
         grid.addWidget(QtWidgets.QLabel("vitesse_cam"), r, 0); grid.addWidget(self.vitesse_cam, r, 1); r += 1
-        # Objectif / distances / ouverture
+        # Goalds / distances / aperture
         self.objectif = QtWidgets.QLineEdit("")
         self.focal_mm = QtWidgets.QDoubleSpinBox(); self.focal_mm.setRange(0.1, 1000.0); self.focal_mm.setDecimals(2); self.focal_mm.setValue(35.20)
         self.focus_distance_m = QtWidgets.QDoubleSpinBox(); self.focus_distance_m.setRange(0.0, 100.0); self.focus_distance_m.setDecimals(3); self.focus_distance_m.setValue(2.800)
