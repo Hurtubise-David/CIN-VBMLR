@@ -673,7 +673,10 @@ class VDAWorker(QtCore.QObject):
                 self.status_msg.emit(f"VDA ok: depth shape={getattr(depth,'shape',None)} key={key}")
                 self.depth_ready.emit(depth, ts, key)
             except Exception as e:
-                self.status_msg.emit(f"VDA error: {e}")
+                            tb = traceback.format_exc()
+                            self.status_msg.emit(
+                                f"VDA error ({type(e).__name__}): {repr(e)}\n{tb}"
+                            )
 
         self.status_msg.emit("VDA: worker stop")
 
@@ -839,6 +842,7 @@ class ExrSequencePage(QtWidgets.QWidget):
             self.vda_submit.connect(self.vda_worker.submit, QtCore.Qt.DirectConnection)
             self.vda_worker.depth_ready.connect(self._on_vda_depth_ready)
             self.vda_worker.status_msg.connect(self._status)
+            
 
             self.vda_thread.start()
 
