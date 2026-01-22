@@ -24,6 +24,7 @@ import yaml
 import glob
 import re
 import torch
+import inspect
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 
@@ -412,21 +413,52 @@ def exr_read_timecode(exr_path: str):
 
 def build_vda_wrapper():
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    fp16 = (device == "cuda")
-    try:
-        impl = VDAStream(encoder="vits", device=device, fp16=fp16)
-    except TypeError:
-        impl = VDAStream(encoder="vits", fp16=fp16)
 
-        if hasattr(impl, "device"):
-            try: impl.device = device
-            except Exception: pass
-        if hasattr(impl, "to"):
-            try: impl.to(device)
-            except Exception: pass
-        if hasattr(impl, "model"):
-            try: impl.model.to(device)
-            except Exception: pass
+    # --- Construct VDAStream ---
+    ctor = VDAStream
+    sig = None
+    try:
+        sig = inspect.signature(ctor)
+    except Exception:
+        pass
+
+    # test arguments
+    candidates = [
+        {"encoder": "vits"},
+        {},  
+    ]
+
+    last_err = None
+    impl = None
+    for kw in candidates:
+        try:
+            if sig is not None:
+                # filter: take kwargs only supported
+                kw = {k: v for k, v in kw.items() if k in sig.parameters}
+            impl = ctor(**kw)
+            break
+        except TypeError as e:
+            last_err = e
+            continue
+
+    if impl is None:
+        raise RuntimeError(f"Impossible instance of VDAStream. Last error: {last_err}")
+
+    if hasattr(impl, "to"):
+        try: impl.to(device)
+        except Exception: pass
+
+    if hasattr(impl, "model"):
+        try: impl.model.to(device)
+        except Exception: pass
+
+    if hasattr(impl, "net"):
+        try: impl.net.to(device)
+        except Exception: pass
+
+    if hasattr(impl, "device"):
+        try: impl.device = device
+        except Exception: pass
 
     return VDAAdapter(impl, device=device)
 
