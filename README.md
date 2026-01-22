@@ -1,7 +1,7 @@
 # CIN-VBMLR: Cinema Variational Bayesian Multinomial Logistic Regression
 
 [![Hugging Face Dataset](https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-CINE--VBMLR%20Dataset-blue)](https://huggingface.co/datasets/Hurtubisedavid/CIN-VBMLR)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
 ## Overview
 
