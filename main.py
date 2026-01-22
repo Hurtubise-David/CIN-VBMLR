@@ -1487,6 +1487,17 @@ class ExrSequencePage(QtWidgets.QWidget):
         # EXR -> exr3
         exr3 = exr[:, :, :3] if (exr.ndim == 3 and exr.shape[2] >= 3) else exr
 
+        # -------------------- build panel_lines (MINIMAL) BEFORE VDA --------------------
+        exr_prefix = Path(exr_path).name.split(".")[0]
+        clip_name = self.meta_clip_name or exr_prefix
+
+        panel_lines = [
+            f"{clip_name}",
+            f"Frame {frame_num:06d} / {len(self.exr_files)}",
+            f"TC {tc_exr}" if tc_exr else "TC (EXR absent)",
+        ]
+
+
         # --- build key cache (per path) ---
         cache_key = str(exr_path)
 
@@ -1532,17 +1543,17 @@ class ExrSequencePage(QtWidgets.QWidget):
             vis8 = self._draw_panel_bottom_left(vis8, panel_lines)
 
 
-        # >>> downscale for preview (ex: width max 1600)
+        # >>> downscale PREVIEW (vis8) to max width 1600
         max_w = 1600
-        h0, w0 = exr3.shape[:2]
+        h0, w0 = vis8.shape[:2]
         if w0 > max_w:
             scale = max_w / float(w0)
-            exr3 = cv2.resize(exr3, (int(w0*scale), int(h0*scale)), interpolation=cv2.INTER_AREA)
+            vis8 = cv2.resize(vis8, (int(w0*scale), int(h0*scale)), interpolation=cv2.INTER_AREA)
 
-        vis8 = exr_to_preview_bgr8(exr3)
         if vis8 is None:
             self.preview.setText("Error: conversion preview EXR.")
             return
+
 
         # -------------------- search row meta of the frame --------------------
         frame_num = self.exr_frame_nums[self.idx] if hasattr(self, "exr_frame_nums") else (self.idx + 1)
