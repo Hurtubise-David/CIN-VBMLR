@@ -1465,6 +1465,8 @@ class ExrSequencePage(QtWidgets.QWidget):
             return
 
         exr_path = self.exr_files[self.idx]
+
+        # --- TC EXR cache ---
         tc_exr = self._exr_tc_cache.get(exr_path)
         if tc_exr is None:
             tc_exr = exr_read_timecode(exr_path)
@@ -1483,10 +1485,7 @@ class ExrSequencePage(QtWidgets.QWidget):
             return
 
         # EXR -> exr3
-        if exr.ndim == 3 and exr.shape[2] >= 3:
-            exr3 = exr[:, :, :3]
-        else:
-            exr3 = exr
+        exr3 = exr[:, :, :3] if (exr.ndim == 3 and exr.shape[2] >= 3) else exr
 
         # --- build key cache (per path) ---
         cache_key = str(exr_path)
