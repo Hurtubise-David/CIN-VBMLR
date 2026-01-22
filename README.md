@@ -18,7 +18,7 @@ This approach is designed to handle the high-resolution, shallow depth-of-field 
 
 This repository is paired with the **CINE-VBMLR Dataset**, a large-scale calibration dataset captured at **MELS Studios** with ARRI cameras and precise lens metadata.
 
-👉 **[Download the Dataset on Hugging Face](https://huggingface.co/datasets/Hurtubisedavid/CIN-VBMLR)**
+**[Download the Dataset on Hugging Face](https://huggingface.co/datasets/Hurtubisedavid/CIN-VBMLR)**
 
 To load the dataset in your Python script:
 
