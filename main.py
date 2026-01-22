@@ -411,14 +411,25 @@ def exr_read_timecode(exr_path: str):
         return None
 
 def build_vda_wrapper():
-    # (encoder, fp16, device)
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    vda = VideoDepthAnything(
-        encoder="vits",        # or "vitl"
-        device=device,
-        fp16=(device == "cuda")
-    )
-    return vda
+    fp16 = (device == "cuda")
+    try:
+        impl = VDAStream(encoder="vits", device=device, fp16=fp16)
+    except TypeError:
+        impl = VDAStream(encoder="vits", fp16=fp16)
+
+        if hasattr(impl, "device"):
+            try: impl.device = device
+            except Exception: pass
+        if hasattr(impl, "to"):
+            try: impl.to(device)
+            except Exception: pass
+        if hasattr(impl, "model"):
+            try: impl.model.to(device)
+            except Exception: pass
+
+    return VDAAdapter(impl, device=device)
+
 
 def depth_to_vis_u8(depth: np.ndarray):
     """depth float32 -> BGR uint8 for show."""
