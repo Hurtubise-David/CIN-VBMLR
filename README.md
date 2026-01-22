@@ -29,3 +29,16 @@ from datasets import load_dataset
 dataset = load_dataset("Hurtubisedavid/CIN-VBMLR")
 
 print(dataset['train'][0])
+
+## Theory & References
+```
+The core algorithm is based on **Variational Bayesian Multinomial Logistic Regression**. If you use this code or dataset, please cite the following foundational papers:
+
+### 1. Core Method (CINE-VBMLR)
+* **Hurtubise-Martin, D.**, et al. *Real-time eye gaze estimation on a computer screen*. (Manuscript in preparation).
+  * *Foundation of the VBMLR probabilistic model adapted here for cinema.*
+
+### 2. Depth from Defocus & Camera Parameters
+* **Ziou, D., & Deschênes, F. (2001).** [Depth from defocus estimation in spatial domain](https://doi.org/10.1006/cviu.2000.0899). *Computer Vision and Image Understanding*, 81(2), 143-165.
+* **Mannan, F., & Langer, M. S. (2015).** [Optimal camera parameters for depth from defocus](https://doi.org/10.1109/3DV.2015.44). In *2015 International Conference on 3D Vision* (pp. 326-334). IEEE.
+* **LeBlanc, J. W., Thelen, B. J., & Hero, A. O. (2018).** [Joint camera blur and pose estimation from aliased data](https://opg.optica.org/josaa/abstract.cfm?uri=josaa-35-4-639). *Journal of the Optical Society of America A*, 35(4), 639-651.
