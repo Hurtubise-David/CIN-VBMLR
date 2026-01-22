@@ -29,9 +29,17 @@ from datasets import load_dataset
 dataset = load_dataset("Hurtubisedavid/CIN-VBMLR")
 
 print(dataset['train'][0])
+```
+
+## Third-Party Components & Licensing
+This pipeline integrates Video Depth Anything (VDA) to provide dense temporal depth priors.
+
+* Default Configuration: This repository is configured to use the VDA-Small (vits) model by default.
+* Licensing: The VDA-Small model and code are licensed under Apache-2.0, which is fully compatible with this project's license.
+* Important: If you choose to manually download and use the VDA-Base or VDA-Large checkpoints, please note that those specific weights are governed by a CC-BY-NC-4.0 license (Non-Commercial).
 
 ## Theory & References
-```
+
 The core algorithm is based on **Variational Bayesian Multinomial Logistic Regression**. If you use this code or dataset, please cite the following foundational papers:
 
 ### 1. Core Method (CINE-VBMLR)
