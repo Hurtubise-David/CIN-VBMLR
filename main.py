@@ -547,23 +547,24 @@ class VDAAdapter:
 
     @torch.no_grad()
     def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
-        # 1) API: impl.infer(bgr)->depth
-        if hasattr(self.impl, "infer"):
-            depth = self.impl.infer(frame_bgr)
-            if torch.is_tensor(depth):
-                depth = depth.detach().float().cpu().numpy()
-            return np.asarray(depth, dtype=np.float32)
+        frame_bgr = np.ascontiguousarray(frame_bgr)
 
-        # 2) API “model-like” : infer_video_depth_one(rgb, input_size, device)
         if hasattr(self.impl, "infer_video_depth_one"):
             rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
             depth = self.impl.infer_video_depth_one(rgb, input_size=518, device=self.device)
             if torch.is_tensor(depth):
                 depth = depth.detach().float().cpu().numpy()
-            depth = np.asarray(depth, dtype=np.float32)
-            return depth.squeeze()
+            return np.asarray(depth, dtype=np.float32).squeeze()
 
-        raise AttributeError("VDA backend: no method infer/infer_video_depth_one found.")
+        # 2) Fallback 
+        if hasattr(self.impl, "infer"):
+            depth = self.impl.infer(frame_bgr)
+            if torch.is_tensor(depth):
+                depth = depth.detach().float().cpu().numpy()
+            return np.asarray(depth, dtype=np.float32).squeeze()
+
+        raise AttributeError("VDA backend: no method infer_video_depth_one / infer found.")
+
 
 
 
@@ -669,6 +670,7 @@ class VDAWorker(QtCore.QObject):
             frame_bgr, ts, key = item
             try:
                 depth = self.vda.infer(frame_bgr)
+                self.status_msg.emit(f"VDA ok: depth shape={getattr(depth,'shape',None)} key={key}")
                 self.depth_ready.emit(depth, ts, key)
             except Exception as e:
                 self.status_msg.emit(f"VDA error: {e}")
