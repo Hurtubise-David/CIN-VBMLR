@@ -2346,7 +2346,12 @@ class ExrSequencePage(QtWidgets.QWidget):
                         self.lbl_zg_info.setText(f"ZgInfo: {st.get('reason','not_ready')}")
                 else:
                     self.lbl_zg.setText("Zg: —")
-                    self.lbl_zg_info.setText("ZgInfo: (need defocus depth + enable)")
+                    if not self.chk_zg.isChecked():
+                        self.lbl_zg_info.setText("ZgInfo: (disabled)")
+                    elif self._last_depth_defocus_m is None:
+                        self.lbl_zg_info.setText("ZgInfo: need defocus depth (enable defocus + valid edges)")
+                    else:
+                        self.lbl_zg_info.setText("ZgInfo: (waiting)")
 
                 # show depth VDA
                 vis8 = depth_to_vis_u8(depth_vda)
