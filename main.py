@@ -598,7 +598,8 @@ class VDAAdapter:
             raise AttributeError("VDA backend: no method infer_video_depth_one / infer found.")
 
 
-
+# ============================ Defocus / Blur Model (LeBlanc-style) ============================ #
+from dataclasses import dataclass
 
 
 
