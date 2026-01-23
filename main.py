@@ -1326,46 +1326,43 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.btn_open_csv.setEnabled(False)
 
         # --- Defocus blur controls ---
-        self.chk_defocus = QCheckBox("Defocus blur σ(px) + depth")
+        self.chk_defocus = QtWidgets.QCheckBox("Defocus blur σ(px) + depth")
         self.chk_defocus.setChecked(True)
 
-        self.spin_roi_px = QSpinBox()
+        self.spin_roi_px = QtWidgets.QSpinBox()
         self.spin_roi_px.setRange(0, 2000)
         self.spin_roi_px.setValue(0)  # 0 = use ratio
         self.spin_roi_px.setSuffix(" px ROI (0=auto)")
 
-        self.spin_roi_ratio = QDoubleSpinBox()
+        self.spin_roi_ratio = QtWidgets.QDoubleSpinBox()
         self.spin_roi_ratio.setRange(0.10, 0.90)
         self.spin_roi_ratio.setSingleStep(0.05)
         self.spin_roi_ratio.setValue(0.35)
 
-        self.spin_alpha = QDoubleSpinBox()
+        self.spin_alpha = QtWidgets.QDoubleSpinBox()
         self.spin_alpha.setRange(0.05, 3.0)
         self.spin_alpha.setSingleStep(0.05)
         self.spin_alpha.setValue(0.8)
 
-        self.spin_k1 = QDoubleSpinBox()
+        self.spin_k1 = QtWidgets.QDoubleSpinBox()
         self.spin_k1.setRange(-2.0, 2.0)
         self.spin_k1.setSingleStep(0.01)
         self.spin_k1.setValue(0.0)
 
-        self.lbl_sigma = QLabel("σ(px): —")
-        self.lbl_depth_defocus = QLabel("Depth_defocus(m): —")
-        self.lbl_blur_info = QLabel("BlurInfo: —")
+        self.lbl_sigma = QtWidgets.QLabel("σ(px): —")
+        self.lbl_depth_defocus = QtWidgets.QLabel("Depth_defocus(m): —")
+        self.lbl_blur_info = QtWidgets.QLabel("BlurInfo: —")
 
-        # Ajoute au layout (exemple)
-        layout_controls.addWidget(self.chk_defocus)
-        layout_controls.addWidget(QLabel("ROI ratio"))
-        layout_controls.addWidget(self.spin_roi_ratio)
-        layout_controls.addWidget(QLabel("ROI px"))
-        layout_controls.addWidget(self.spin_roi_px)
-        layout_controls.addWidget(QLabel("alpha (circle→gauss)"))
-        layout_controls.addWidget(self.spin_alpha)
-        layout_controls.addWidget(QLabel("k1 (complex lens)"))
-        layout_controls.addWidget(self.spin_k1)
-        layout_controls.addWidget(self.lbl_sigma)
-        layout_controls.addWidget(self.lbl_depth_defocus)
-        layout_controls.addWidget(self.lbl_blur_info)
+        g.addWidget(self.chk_defocus, r, 0, 1, 2); r += 1
+
+        g.addWidget(QtWidgets.QLabel("ROI ratio"), r, 0); g.addWidget(self.spin_roi_ratio, r, 1); r += 1
+        g.addWidget(QtWidgets.QLabel("ROI px (0=auto)"), r, 0); g.addWidget(self.spin_roi_px, r, 1); r += 1
+        g.addWidget(QtWidgets.QLabel("alpha (circle to gauss)"), r, 0); g.addWidget(self.spin_alpha, r, 1); r += 1
+        g.addWidget(QtWidgets.QLabel("k1 (complex lens)"), r, 0); g.addWidget(self.spin_k1, r, 1); r += 1
+
+        g.addWidget(self.lbl_sigma, r, 0, 1, 2); r += 1
+        g.addWidget(self.lbl_depth_defocus, r, 0, 1, 2); r += 1
+        g.addWidget(self.lbl_blur_info, r, 0, 1, 2); r += 1
 
 
 
@@ -2296,6 +2293,8 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.meta_view.setPlainText(meta_txt)
 
         # --- estimate blur sigma and depth_defocus ---
+        self.current_preview_bgr = vis8  
+        self.current_meta_row = row      
         if hasattr(self, "chk_defocus") and self.chk_defocus.isChecked():
             try:
                 # 1) Choose image to measure blur on:
