@@ -771,6 +771,29 @@ def r_norm_from_xy(x: float, y: float, w: int, h: int) -> float:
     r = np.sqrt(dx*dx + dy*dy)
     return float(np.clip(r, 0.0, 1.0))
 
+def build_defocus_model_from_row(row: dict, pixel_pitch_um: float = 5.0,
+                                 k1: float = 0.0, k2: float = 0.0, k3: float = 0.0,
+                                 alpha: float = 0.8) -> DefocusModel:
+    """
+    Construct model from the CSV metadata row (ARRI LDS).
+    We parse:
+      - Lens Focal Length (mm)
+      - Lens Focus Distance (m)
+      - Lens Iris (f-number / T-stop)
+    """
+    f_mm   = _safe_float(row.get("Lens Focal Length")) if row else None
+    focus  = _safe_float(row.get("Lens Focus Distance")) if row else None
+    iris   = _safe_float(row.get("Lens Iris")) if row else None
+
+    pri = LensPriors(
+        f_mm=f_mm if f_mm is not None else 35.0,
+        focus_m=focus if focus is not None else 2.0,
+        N=iris if iris is not None else 2.8,
+        pixel_pitch_um=float(pixel_pitch_um)
+    )
+    corr = ComplexLensCorrection(k1=float(k1), k2=float(k2), k3=float(k3))
+    return DefocusModel(priors=pri, corr=corr, alpha=float(alpha))
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
