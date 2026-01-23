@@ -542,6 +542,14 @@ class VDAAdapter:
 
     def reset_stream_size(self):
         self._fixed_hw = None
+        # reset internal streaming size if VideoDepthAnything keeps it
+        if hasattr(self.impl, "frame_height"):
+            self.impl.frame_height = None
+        if hasattr(self.impl, "frame_width"):
+            self.impl.frame_width = None
+        # if the class exposes a reset()
+        if hasattr(self.impl, "reset") and callable(self.impl.reset):
+            self.impl.reset()
 
     @torch.no_grad()
     def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
