@@ -1578,6 +1578,16 @@ class ExrSequencePage(QtWidgets.QWidget):
                 # submit async (only once via QueuedConnection)
                 ts = time.time()
                 self._last_req_key = cache_key
+                # enforce constant input size to VDA
+                h_in, w_in = bgr8_for_vda.shape[:2]
+                if self._vda_submit_hw is None:
+                    self._vda_submit_hw = (h_in, w_in)
+                else:
+                    hf, wf = self._vda_submit_hw
+                    if (h_in, w_in) != (hf, wf):
+                        bgr8_for_vda = cv2.resize(bgr8_for_vda, (wf, hf), interpolation=cv2.INTER_AREA)
+                        bgr8_for_vda = np.ascontiguousarray(bgr8_for_vda)
+
                 self.vda_submit.emit(bgr8_for_vda, ts, cache_key)
 
                 # fallback: show RGB preview during compute
