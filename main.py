@@ -830,6 +830,17 @@ def _to_gray_float01(img_bgr_or_gray):
     g = np.clip(g, 0.0, 1.0)
     return g
 
+def _central_square_roi(w: int, h: int, cfg: BlurEstConfig):
+    if cfg.roi_px and cfg.roi_px > 0:
+        s = int(cfg.roi_px)
+    else:
+        s = int(cfg.roi_ratio * min(w, h))
+    s = max(32, min(s, min(w, h)))
+
+    x0 = (w - s) // 2
+    y0 = (h - s) // 2
+    return x0, y0, s, s
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
