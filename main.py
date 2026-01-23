@@ -859,6 +859,54 @@ def _sample_profile_bilinear(gray01: np.ndarray, x: float, y: float, nx: float, 
                      borderMode=cv2.BORDER_REFLECT101)
     return prof.reshape(-1)
 
+def _width_10_90(profile: np.ndarray):
+    """
+    Estimate 10-90% transition width in pixels from a 1D profile.
+    For a step edge blurred by Gaussian, sigma ≈ w10-90 / 2.565.
+    Return (w, contrast). If cannot compute, return (None, contrast).
+    """
+    p = profile.astype(np.float32)
+
+    # Determine direction: rising edge (low -> high)
+    p0, p1 = p[0], p[-1]
+    if p1 < p0:
+        p = p[::-1]  # flip
+
+    lo = float(p.min())
+    hi = float(p.max())
+    contrast = hi - lo
+    if contrast < 1e-6:
+        return None, contrast
+
+    # Normalize 0..1 across this profile
+    pn = (p - lo) / contrast
+
+    # Find x where crosses 0.1 and 0.9
+    def _cross(level):
+        idx = np.where(pn >= level)[0]
+        if len(idx) == 0:
+            return None
+        i = int(idx[0])
+        if i == 0:
+            return 0.0
+        # linear interpolation between i-1 and i
+        a = pn[i - 1]
+        b = pn[i]
+        if abs(b - a) < 1e-9:
+            return float(i)
+        t = (level - a) / (b - a)
+        return float((i - 1) + t)
+
+    x10 = _cross(0.10)
+    x90 = _cross(0.90)
+    if x10 is None or x90 is None:
+        return None, contrast
+    if x90 <= x10:
+        return None, contrast
+
+    w = x90 - x10
+    return float(w), contrast
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
