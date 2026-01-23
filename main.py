@@ -539,46 +539,64 @@ class VDAAdapter:
         self.impl = impl
         self.device = device
         self._fixed_hw = None  # (h, w) for streaming consistency
+        self._infer_lock = threading.Lock()  # <-- ADD
+
+    def _sync_backend_hw(self, h: int, w: int):
+        # VideoDepthAnything keeps stream size internally; keep it consistent
+        if hasattr(self.impl, "frame_height"):
+            self.impl.frame_height = int(h)
+        if hasattr(self.impl, "frame_width"):
+            self.impl.frame_width = int(w)
 
     def reset_stream_size(self):
+        # reset OUR size constraint + backend temporal state if available
         self._fixed_hw = None
-        # reset internal streaming size if VideoDepthAnything keeps it
-        if hasattr(self.impl, "frame_height"):
-            self.impl.frame_height = None
-        if hasattr(self.impl, "frame_width"):
-            self.impl.frame_width = None
-        # if the class exposes a reset()
         if hasattr(self.impl, "reset") and callable(self.impl.reset):
             self.impl.reset()
 
     @torch.no_grad()
     def infer(self, frame_bgr: np.ndarray) -> np.ndarray:
-        frame_bgr = np.ascontiguousarray(frame_bgr)
+        with self._infer_lock:  # <-- IMPORTANT (avoid 2 threads fighting)
+            frame_bgr = np.ascontiguousarray(frame_bgr)
 
-        # --- enforce constant H,W for VDA streaming ---
-        h0, w0 = frame_bgr.shape[:2]
-        if self._fixed_hw is None:
-            self._fixed_hw = (h0, w0)
-        else:
-            hf, wf = self._fixed_hw
-            if (h0, w0) != (hf, wf):
-                frame_bgr = cv2.resize(frame_bgr, (wf, hf), interpolation=cv2.INTER_AREA)
-                frame_bgr = np.ascontiguousarray(frame_bgr)
+            # --- enforce constant H,W for VDA streaming ---
+            h0, w0 = frame_bgr.shape[:2]
+            if self._fixed_hw is None:
+                self._fixed_hw = (h0, w0)
+            else:
+                hf, wf = self._fixed_hw
+                if (h0, w0) != (hf, wf):
+                    frame_bgr = cv2.resize(frame_bgr, (wf, hf), interpolation=cv2.INTER_AREA)
+                    frame_bgr = np.ascontiguousarray(frame_bgr)
 
-        if hasattr(self.impl, "infer_video_depth_one"):
-            rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-            depth = self.impl.infer_video_depth_one(rgb, input_size=518, device=self.device)
-            if torch.is_tensor(depth):
-                depth = depth.detach().float().cpu().numpy()
-            return np.asarray(depth, dtype=np.float32).squeeze()
+            # backend must see EXACT same size
+            h, w = frame_bgr.shape[:2]
+            self._sync_backend_hw(h, w)
 
-        if hasattr(self.impl, "infer"):
-            depth = self.impl.infer(frame_bgr)
-            if torch.is_tensor(depth):
-                depth = depth.detach().float().cpu().numpy()
-            return np.asarray(depth, dtype=np.float32).squeeze()
+            # call VDA
+            if hasattr(self.impl, "infer_video_depth_one"):
+                rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+                try:
+                    depth = self.impl.infer_video_depth_one(rgb, input_size=518, device=self.device)
+                except AssertionError:
+                    # hard recovery: reset + resync + retry once
+                    if hasattr(self.impl, "reset") and callable(self.impl.reset):
+                        self.impl.reset()
+                    self._sync_backend_hw(h, w)
+                    depth = self.impl.infer_video_depth_one(rgb, input_size=518, device=self.device)
 
-        raise AttributeError("VDA backend: no method infer_video_depth_one / infer found.")
+                if torch.is_tensor(depth):
+                    depth = depth.detach().float().cpu().numpy()
+                return np.asarray(depth, dtype=np.float32).squeeze()
+
+            if hasattr(self.impl, "infer"):
+                depth = self.impl.infer(frame_bgr)
+                if torch.is_tensor(depth):
+                    depth = depth.detach().float().cpu().numpy()
+                return np.asarray(depth, dtype=np.float32).squeeze()
+
+            raise AttributeError("VDA backend: no method infer_video_depth_one / infer found.")
+
 
 
 
