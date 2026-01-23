@@ -2186,6 +2186,20 @@ class ExrSequencePage(QtWidgets.QWidget):
         # EXR -> exr3
         exr3 = exr[:, :, :3] if (exr.ndim == 3 and exr.shape[2] >= 3) else exr
 
+        # -------------------- META ROW (BEFORE DEFOCUS) --------------------
+        row = None
+        if self.meta_rows_by_frame:
+            row = self.meta_rows_by_frame.get(frame_num, None)
+            if row is None:
+                row = self.meta_rows_by_frame.get(frame_num - 1, None)  # CSV can be 0-index
+        if row is None and self.meta_rows_seq:
+            if 1 <= frame_num <= len(self.meta_rows_seq):
+                row = self.meta_rows_seq[frame_num - 1]
+            elif 0 <= self.idx < len(self.meta_rows_seq):
+                row = self.meta_rows_seq[self.idx]
+
+
+
         # -------------------- build panel_lines (MINIMAL) BEFORE VDA --------------------
         exr_prefix = Path(exr_path).name.split(".")[0]
         clip_name = self.meta_clip_name or exr_prefix
