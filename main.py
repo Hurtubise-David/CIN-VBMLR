@@ -644,6 +644,120 @@ def _safe_float(x, default=None):
         return float(s)
     except Exception:
         return default
+    
+class DefocusModel:
+    """
+    Thin-lens forward model + “complex lens” correction.
+    We model the blur diameter on sensor (CoC) then map to a Gaussian sigma in pixels.
+
+    Thin lens:
+      1/f = 1/s + 1/v
+      v(s)   = f*s/(s - f)
+      v_f    = f*s_f/(s_f - f)  where s_f = focus distance
+      Aperture diameter A = f/N
+
+    CoC diameter on sensor (approx):
+      c = A * |v - v_f| / v
+
+    Then sigma_px = alpha * c / pixel_pitch
+      alpha is a fit factor (circle->Gaussian, pipeline blur kernel, demosaic etc.)
+      start with alpha ~ 0.5 to 1.0 and fit later.
+    """
+
+    def __init__(self, priors: LensPriors, corr: ComplexLensCorrection = None, alpha: float = 0.8):
+        self.priors = priors
+        self.corr = corr if corr is not None else ComplexLensCorrection()
+        self.alpha = float(alpha)
+
+    @staticmethod
+    def _v_image_distance_m(f_m: float, s_m: float) -> float:
+        # v = f*s/(s-f)
+        eps = 1e-9
+        if abs(s_m - f_m) < eps:
+            s_m = f_m + np.sign(s_m - f_m) * eps
+        return (f_m * s_m) / (s_m - f_m)
+
+    def coc_diameter_m(self, depth_m: float) -> float:
+        # convert priors
+        f_m = self.priors.f_mm * 1e-3
+        s_f = max(1e-4, float(self.priors.focus_m))
+        N   = max(0.5, float(self.priors.N))
+
+        # image distances
+        v   = self._v_image_distance_m(f_m, max(1e-4, float(depth_m)))
+        v_f = self._v_image_distance_m(f_m, s_f)
+
+        A = f_m / N  # aperture diameter (m)
+        c = A * abs(v - v_f) / max(1e-9, v)
+        return float(c)
+
+    def sigma_px_from_depth(self, depth_m: float, r_norm: float = 0.0) -> float:
+        """
+        r_norm: normalized radius in image (0 center -> 1 corner).
+        """
+        pitch_m = max(1e-12, self.priors.pixel_pitch_um * 1e-6)
+        c = self.coc_diameter_m(depth_m)
+
+        # complex-lens correction
+        c *= self.corr.scale(float(np.clip(r_norm, 0.0, 1.0)))
+
+        sigma_px = self.alpha * (c / pitch_m)
+        return float(max(0.0, sigma_px))
+
+    def depth_from_sigma_px(self, sigma_px: float, r_norm: float = 0.0,
+                            depth_min_m: float = 0.2, depth_max_m: float = 50.0) -> float:
+        """
+        Invert sigma->depth by bisection (robust).
+        Note: defocus is symmetric around focus plane (near/far ambiguity).
+        This inversion returns the depth on the “far side” by default,
+        unless you constrain with VDA / scene priors later.
+        """
+        target = float(max(0.0, sigma_px))
+        r_norm = float(np.clip(r_norm, 0.0, 1.0))
+
+        # If sigma is ~0 => depth ~ focus distance
+        if target < 1e-6:
+            return float(self.priors.focus_m)
+
+        # Bisection on depth in [min,max] (monotonic only on one side of focus).
+        # We'll search on FAR side: [focus, depth_max]
+        lo = max(float(self.priors.focus_m), depth_min_m)
+        hi = max(lo + 1e-3, depth_max_m)
+
+        def f(d):
+            return self.sigma_px_from_depth(d, r_norm=r_norm) - target
+
+        flo = f(lo)
+        fhi = f(hi)
+
+        # If not bracketed, expand hi a bit
+        if flo * fhi > 0:
+            hi2 = hi
+            for _ in range(8):
+                hi2 *= 1.5
+                fhi = f(hi2)
+                if flo * fhi <= 0:
+                    hi = hi2
+                    break
+
+        # If still not bracketed, return something safe
+        if flo * fhi > 0:
+            # fallback: just return far bound
+            return float(hi)
+
+        for _ in range(60):
+            mid = 0.5 * (lo + hi)
+            fm = f(mid)
+            if abs(fm) < 1e-6:
+                return float(mid)
+            if flo * fm <= 0:
+                hi = mid
+                fhi = fm
+            else:
+                lo = mid
+                flo = fm
+
+        return float(0.5 * (lo + hi))
 
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
