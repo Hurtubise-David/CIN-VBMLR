@@ -817,6 +817,149 @@ class BlurEstConfig:
     # If image is uint8, it will be normalized to 0..1 internally.
     use_canny: bool = False          # optional mode; Sobel coulb be enough
 
+class ZgEstimator:
+    """
+    Calibre VDA -> meter via LED.
+    Support 2 modes:
+      - direct: depth_m = a * depth_vda
+      - inverse: depth_m = a / depth_vda
+    """
+    def __init__(self, cfg: ZgConfig = None):
+        self.cfg = cfg or ZgConfig()
+        self.a = None
+        self.mode = None  # "direct" or "inverse"
+        self.last_stats = {}
+
+    def _ema(self, old, new):
+        if old is None:
+            return float(new)
+        b = float(np.clip(self.cfg.ema_beta, 0.0, 0.9999))
+        return float(b * old + (1.0 - b) * new)
+
+    def compute_led_mask_from_depth(self, depth: np.ndarray) -> np.ndarray:
+        """
+        Masque LED = most little pixels values
+        """
+        if depth is None:
+            return None
+
+        d = np.asarray(depth, dtype=np.float32)
+        d = np.nan_to_num(d, nan=0.0, posinf=0.0, neginf=0.0)
+
+        # ignore null if so
+        valid = d > self.cfg.eps
+        if np.count_nonzero(valid) < 100:
+            valid = np.ones_like(d, dtype=bool)
+
+        dv = d[valid]
+        thr = np.percentile(dv, float(self.cfg.blue_percentile))
+        mask = (d <= thr) & valid
+
+        # cleanup morpho
+        mask_u8 = (mask.astype(np.uint8) * 255)
+        k = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
+        mask_u8 = cv2.morphologyEx(mask_u8, cv2.MORPH_OPEN, k, iterations=1)
+        mask_u8 = cv2.morphologyEx(mask_u8, cv2.MORPH_CLOSE, k, iterations=2)
+
+        if self.cfg.use_largest_cc:
+            n, labels, stats, _ = cv2.connectedComponentsWithStats(mask_u8, connectivity=8)
+            if n <= 1:
+                return (mask_u8 > 0)
+            # skip background (0), pick largest
+            areas = stats[1:, cv2.CC_STAT_AREA]
+            idx = 1 + int(np.argmax(areas))
+            mask_u8 = (labels == idx).astype(np.uint8) * 255
+
+        return (mask_u8 > 0)
+
+    def _robust_median(self, arr: np.ndarray):
+        arr = np.asarray(arr, dtype=np.float32)
+        arr = arr[np.isfinite(arr)]
+        if arr.size == 0:
+            return None
+        return float(np.median(arr))
+
+    def update_from_led(self, depth_vda: np.ndarray, depth_defocus_m: float, led_mask: np.ndarray):
+        """
+        Unpdate (direct/inverse) from:
+          - depth_vda (HxW)
+          - depth_defocus_m (float)
+          - led_mask (HxW bool)
+        """
+        cfg = self.cfg
+        self.last_stats = {}
+
+        if (not cfg.enabled) or depth_vda is None or led_mask is None:
+            return
+
+        n_led = int(np.count_nonzero(led_mask))
+        self.last_stats["n_led"] = n_led
+        if n_led < int(cfg.min_pixels):
+            self.last_stats["ok"] = False
+            self.last_stats["reason"] = f"mask_too_small(n={n_led})"
+            return
+
+        d = np.asarray(depth_vda, dtype=np.float32)
+        d = np.nan_to_num(d, nan=0.0, posinf=0.0, neginf=0.0)
+
+        led_vals = d[led_mask]
+        v_led = self._robust_median(led_vals)
+        if v_led is None or v_led < cfg.eps:
+            self.last_stats["ok"] = False
+            self.last_stats["reason"] = "bad_led_depth"
+            return
+
+        # Estimate mode (direct/inverse)
+        bg_mask = (~led_mask)
+        bg_vals = d[bg_mask]
+        v_bg = self._robust_median(bg_vals) if bg_vals.size else None
+
+        # Donc: if v_led > v_bg => inverse, else direct
+        mode = self.mode
+        if v_bg is not None and v_bg > cfg.eps:
+            mode = "inverse" if (v_led > v_bg) else "direct"
+        else:
+            mode = mode or "direct"  # fallback
+
+        # Calibration:
+        # direct: depth_m = a * depth_vda => a = depth_m / v_led
+        # inverse: depth_m = a / depth_vda => a = depth_m * v_led
+        depth_m = float(depth_defocus_m)
+        if depth_m < 1e-4:
+            self.last_stats["ok"] = False
+            self.last_stats["reason"] = "bad_defocus_depth"
+            return
+
+        if mode == "direct":
+            a_new = depth_m / max(cfg.eps, v_led)
+        else:
+            a_new = depth_m * v_led
+
+        self.a = self._ema(self.a, a_new)
+        self.mode = mode
+
+        self.last_stats.update({
+            "ok": True,
+            "mode": self.mode,
+            "a": float(self.a),
+            "v_led": float(v_led),
+            "v_bg": float(v_bg) if v_bg is not None else None,
+        })
+
+    def apply(self, depth_vda: np.ndarray) -> np.ndarray:
+        """Return depth in meters (HxW float32) depend + mode."""
+        if depth_vda is None or self.a is None or self.mode is None:
+            return None
+        d = np.asarray(depth_vda, dtype=np.float32)
+        d = np.nan_to_num(d, nan=0.0, posinf=0.0, neginf=0.0)
+
+        if self.mode == "direct":
+            out = float(self.a) * d
+        else:
+            out = float(self.a) / np.maximum(self.cfg.eps, d)
+
+        return out.astype(np.float32)
+
 def _to_gray_float01(img_bgr_or_gray):
     """
     Accepts uint8 BGR/GRAY or float32/float64.
