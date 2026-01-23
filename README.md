@@ -16,7 +16,7 @@ This approach is designed to handle the high-resolution, shallow depth-of-field 
 
 ## Dataset
 
-This repository is paired with the **CINE-VBMLR Dataset**, a large-scale calibration dataset captured at **MELS Studios** with ARRI cameras and precise lens metadata.
+This repository is paired with the **CIN-VBMLR Dataset**, a large-scale calibration dataset captured at **MELS Studios** with ARRI cameras and precise lens metadata.
 
 **[Download the Dataset on Hugging Face](https://huggingface.co/datasets/Hurtubisedavid/CIN-VBMLR)**
 
