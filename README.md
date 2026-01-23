@@ -51,3 +51,12 @@ The core algorithm is based on **Variational Bayesian Multinomial Logistic Regre
 * **Ziou, D., & Deschênes, F. (2001).** [Depth from defocus estimation in spatial domain](https://doi.org/10.1006/cviu.2000.0899). *Computer Vision and Image Understanding*, 81(2), 143-165.
 * **Mannan, F., & Langer, M. S. (2015).** [Optimal camera parameters for depth from defocus](https://doi.org/10.1109/3DV.2015.44). In *2015 International Conference on 3D Vision* (pp. 326-334). IEEE.
 * **LeBlanc, J. W., Thelen, B. J., & Hero, A. O. (2018).** [Joint camera blur and pose estimation from aliased data](https://opg.optica.org/josaa/abstract.cfm?uri=josaa-35-4-639). *Journal of the Optical Society of America A*, 35(4), 639-651.
+
+## License
+
+This project adopts a multi-component licensing model to balance open research with commercial viability:
+
+* **CIN-VBMLR Code:** The source code in this repository is released under the **Apache License 2.0**.
+* **CIN-VBMLR Dataset:** The associated dataset (hosted on Hugging Face) is released under the **CC-BY-NC-4.0** license.
+
+For business cooperation or commercial licensing inquiries, please send an email to **David Hurtubise** at [hurtubisedavid@gmail.com](mailto:hurtubisedavid@gmail.com).
