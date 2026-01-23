@@ -631,6 +631,19 @@ class ComplexLensCorrection:
     def scale(self, r: float) -> float:
         r2 = r * r
         return 1.0 + self.k1 * r2 + self.k2 * (r2 * r2) + self.k3 * (r2 * r2 * r2)
+    
+def _safe_float(x, default=None):
+    try:
+        if x is None:
+            return default
+        s = str(x).strip()
+        if not s or s in ("--", "-", "nan", "None"):
+            return default
+        # remove units like "mm", "m", "T" if present
+        s = s.replace("mm", "").replace("m", "").replace("T", "").replace("f/", "").strip()
+        return float(s)
+    except Exception:
+        return default
 
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
