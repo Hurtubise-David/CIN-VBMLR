@@ -759,6 +759,18 @@ class DefocusModel:
 
         return float(0.5 * (lo + hi))
 
+def r_norm_from_xy(x: float, y: float, w: int, h: int) -> float:
+    """
+    normalized radius 0..1 from image coordinates (x,y).
+    center => 0, corner => ~1
+    """
+    cx = 0.5 * (w - 1)
+    cy = 0.5 * (h - 1)
+    dx = (x - cx) / max(1.0, cx)
+    dy = (y - cy) / max(1.0, cy)
+    r = np.sqrt(dx*dx + dy*dy)
+    return float(np.clip(r, 0.0, 1.0))
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
