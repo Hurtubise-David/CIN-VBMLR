@@ -2636,7 +2636,7 @@ class AppWindow(QtWidgets.QMainWindow):
         self.page_exr = ExrSequencePage(vda_wrapper=self.vda_wrapper)
 
 
-        for p in (self.capture_page, self.page_calib_mono, self.page_calib_stereo, self.page_live_pose, self.page_pose_graph, self.page_exr):
+        for p in (self.capture_page, self.page_calib_mono, self.page_live_pose, self.page_pose_graph, self.page_exr):
             self.stack.addWidget(p)
         self.stack.setCurrentWidget(self.capture_page)
 
