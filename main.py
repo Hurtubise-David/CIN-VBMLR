@@ -1276,7 +1276,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
             self.vda_thread.started.connect(self.vda_worker.run_loop)
 
-            self.vda_submit.connect(self.vda_worker.submit, QtCore.Qt.QueuedConnection)
+            self.vda_submit.connect(self.vda_worker.submit, QtCore.Qt.DirectConnection)
             self.vda_worker.depth_ready.connect(self._on_vda_depth_ready)
             self.vda_worker.status_msg.connect(self._status)
             
