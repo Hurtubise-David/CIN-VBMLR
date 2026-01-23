@@ -438,13 +438,6 @@ def build_vda_wrapper(encoder: str = "vits"):
     # move to device + eval
     model = model.to(device).eval()
 
-    # tiny warmup (avoid first-frame lag / cuda init)
-    try:
-        dummy = np.zeros((256, 256, 3), dtype=np.uint8)
-        _ = model.infer_video_depth_one(dummy, input_size=256, device=device)
-    except Exception:
-        pass
-
     return VDAAdapter(model, device=device)
 
 
@@ -674,17 +667,6 @@ class VDAWorker(QtCore.QObject):
     @QtCore.pyqtSlot()
     def run_loop(self):
         self.status_msg.emit("VDA: worker start")
-
-        # init/warmup thread
-        try:
-            if self.vda.device.startswith("cuda"):
-                torch.cuda.set_device(0)
-                torch.cuda.synchronize()
-            dummy = np.zeros((256, 256, 3), dtype=np.uint8)
-            _ = self.vda.infer(dummy)
-            self.status_msg.emit("VDA: warmup ok")
-        except Exception as e:
-            self.status_msg.emit(f"VDA warmup error ({type(e).__name__}): {repr(e)}\n{traceback.format_exc()}")
 
         while not self._stop:
             with self._lock:
