@@ -2661,10 +2661,6 @@ class AppWindow(QtWidgets.QMainWindow):
         # Calibrate
         m_cal = mb.addMenu("Calibrate")
         act_cmono = QtWidgets.QAction("Calibrate Mono", self)
-        act_cstereo = QtWidgets.QAction("Calibrate Stereo", self)
-        m_cal.addAction(act_cmono); m_cal.addAction(act_cstereo)
-        act_cmono.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_calib_mono))
-        act_cstereo.triggered.connect(lambda: self.stack.setCurrentWidget(self.page_calib_stereo))
         # Pose Estimation
         m_pose = mb.addMenu("Pose Estimation")
         act_live = QtWidgets.QAction("Live Pose", self)
