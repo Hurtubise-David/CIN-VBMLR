@@ -1516,6 +1516,26 @@ class ExrSequencePage(QtWidgets.QWidget):
         g.addWidget(self.lbl_depth_defocus, r, 0, 1, 2); r += 1
         g.addWidget(self.lbl_blur_info, r, 0, 1, 2); r += 1
 
+        # --- Zg (metric depth calibration) ---
+        self.zg = ZgEstimator(ZgConfig())
+
+        self.chk_zg = QtWidgets.QCheckBox("Zg: calibrate VDA→m using LED (blue)")
+        self.chk_zg.setChecked(True)
+
+        self.spin_zg_beta = QtWidgets.QDoubleSpinBox()
+        self.spin_zg_beta.setRange(0.0, 0.999)
+        self.spin_zg_beta.setSingleStep(0.01)
+        self.spin_zg_beta.setValue(0.90)
+
+        self.spin_zg_bluepct = QtWidgets.QDoubleSpinBox()
+        self.spin_zg_bluepct.setRange(1.0, 40.0)
+        self.spin_zg_bluepct.setSingleStep(1.0)
+        self.spin_zg_bluepct.setValue(10.0)
+
+        self.lbl_zg = QtWidgets.QLabel("Zg: —")
+        self.lbl_zg_info = QtWidgets.QLabel("ZgInfo: —")
+
+
 
 
         g.addWidget(self.btn_open_opti, r, 0, 1, 2); r += 1
