@@ -1402,6 +1402,8 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.meta_clip_name = None
         self.meta_path = None
         self._exr_tc_cache = {}
+        
+        self._last_depth_defocus_m = None
 
         self.vda = vda_wrapper   
         self.vda_enabled = False
