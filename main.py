@@ -2629,7 +2629,6 @@ class AppWindow(QtWidgets.QMainWindow):
 
         self.capture_page = CaptureCamPage(self)
         self.page_calib_mono = PlaceholderPage("Calibrate Mono", "Ici on chargera votre module de calibration mono.")
-        self.page_calib_stereo = CalibrateStereoPage(self)  # <<< intégré
         self.page_live_pose = LivePosePage(self)
         self.page_pose_graph = PlaceholderPage("Pose Graph", "Visualisation du graphe de poses.")
 
