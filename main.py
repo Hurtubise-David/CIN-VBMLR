@@ -841,6 +841,24 @@ def _central_square_roi(w: int, h: int, cfg: BlurEstConfig):
     y0 = (h - s) // 2
     return x0, y0, s, s
 
+def _sample_profile_bilinear(gray01: np.ndarray, x: float, y: float, nx: float, ny: float, half_len: int):
+    """
+    Sample a 1D profile along the gradient direction (normal to edge).
+    Uses cv2.remap for bilinear sampling.
+    Returns profile length (2*half_len+1) float32.
+    """
+    L = int(half_len)
+    t = np.arange(-L, L + 1, dtype=np.float32)
+    xs = (x + t * nx).astype(np.float32)
+    ys = (y + t * ny).astype(np.float32)
+
+    # remap expects maps shaped (H,W) usually, but we can use 1xN
+    map_x = xs.reshape(1, -1)
+    map_y = ys.reshape(1, -1)
+    prof = cv2.remap(gray01, map_x, map_y, interpolation=cv2.INTER_LINEAR,
+                     borderMode=cv2.BORDER_REFLECT101)
+    return prof.reshape(-1)
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
