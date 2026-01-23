@@ -805,8 +805,30 @@ class BlurEstConfig:
     half_profile: int = 12           # half length of 1D profile (pixels)
     grad_thresh: float = 0.06        # threshold on gradient magnitude (in normalized 0..1 space)
     min_contrast: float = 0.08       # ignore weak edges
-    # If your image is uint8, it will be normalized to 0..1 internally.
-    use_canny: bool = False          # optional mode; Sobel is usually enough
+    # If image is uint8, it will be normalized to 0..1 internally.
+    use_canny: bool = False          # optional mode; Sobel coulb be enough
+
+def _to_gray_float01(img_bgr_or_gray):
+    """
+    Accepts uint8 BGR/GRAY or float32/float64.
+    Returns float32 gray image in [0,1] (approximately).
+    """
+    if img_bgr_or_gray is None:
+        return None
+
+    img = img_bgr_or_gray
+    if img.ndim == 3:
+        # assume BGR
+        g = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    else:
+        g = img
+
+    g = g.astype(np.float32)
+    # normalize if looks like uint8 range
+    if g.max() > 1.5:
+        g /= 255.0
+    g = np.clip(g, 0.0, 1.0)
+    return g
 
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
