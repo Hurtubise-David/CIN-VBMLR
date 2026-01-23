@@ -57,6 +57,6 @@ The core algorithm is based on **Variational Bayesian Multinomial Logistic Regre
 This project adopts a multi-component licensing model to balance open research with commercial viability:
 
 * **CIN-VBMLR Code:** The source code in this repository is released under the **Apache License 2.0**.
-* **CIN-VBMLR Dataset:** The associated dataset (hosted on Hugging Face) is released under the **CC-BY-NC-4.0** license.
+* **CIN-VBMLR Dataset:** The associated dataset and models (hosted on Hugging Face) are released under the **CC-BY-NC-4.0** license.
 
 For business cooperation or commercial licensing inquiries, please send an email to **David Hurtubise** at [hurtubisedavid@gmail.com](mailto:hurtubisedavid@gmail.com).
