@@ -907,6 +907,102 @@ def _width_10_90(profile: np.ndarray):
     w = x90 - x10
     return float(w), contrast
 
+def estimate_defocus_sigma_px(gray_or_bgr, cfg: BlurEstConfig = None, roi=None, debug=False):
+    """
+    Main entry.
+    Input: image (BGR or gray, uint8 or float).
+    Output: sigma_px (median), plus stats dict.
+    """
+    if cfg is None:
+        cfg = BlurEstConfig()
+
+    gray01 = _to_gray_float01(gray_or_bgr)
+    if gray01 is None:
+        return None, {"ok": False, "reason": "no_image"}
+
+    h, w = gray01.shape[:2]
+
+    if roi is None:
+        x0, y0, rw, rh = _central_square_roi(w, h, cfg)
+    else:
+        x0, y0, rw, rh = roi
+
+    x1 = min(w, x0 + rw)
+    y1 = min(h, y0 + rh)
+    x0 = max(0, x0)
+    y0 = max(0, y0)
+
+    crop = gray01[y0:y1, x0:x1]
+    if crop.size < 64 * 64:
+        return None, {"ok": False, "reason": "roi_too_small"}
+
+    # Gradients (Sobel) in ROI
+    gx = cv2.Sobel(crop, cv2.CV_32F, 1, 0, ksize=3)
+    gy = cv2.Sobel(crop, cv2.CV_32F, 0, 1, ksize=3)
+    mag = cv2.magnitude(gx, gy)
+
+    # Edge candidates: take top-k gradient pixels above threshold
+    # threshold tuned for 0..1 images
+    mask = mag > float(cfg.grad_thresh)
+    ys, xs = np.where(mask)
+    if len(xs) == 0:
+        return None, {"ok": False, "reason": "no_edges"}
+
+    mags = mag[ys, xs]
+    order = np.argsort(-mags)  # descending
+    k = min(int(cfg.max_edges), len(order))
+    order = order[:k]
+
+    sigmas = []
+    contrasts = []
+
+    # global coords conversion: ROI -> full image
+    for idx in order:
+        yy = int(ys[idx])
+        xx = int(xs[idx])
+
+        gxx = float(gx[yy, xx])
+        gyy = float(gy[yy, xx])
+
+        # gradient direction = normal to edge
+        norm = np.hypot(gxx, gyy)
+        if norm < 1e-9:
+            continue
+        nx = gxx / norm
+        ny = gyy / norm
+
+        # sample profile on the FULL image to avoid border issues
+        X = float(x0 + xx)
+        Y = float(y0 + yy)
+
+        prof = _sample_profile_bilinear(gray01, X, Y, nx, ny, cfg.half_profile)
+        w1090, c = _width_10_90(prof)
+        if w1090 is None:
+            continue
+        if c < float(cfg.min_contrast):
+            continue
+
+        # Gaussian relation: w10-90 ≈ 2.565 * sigma
+        sigma = float(w1090 / 2.565)
+        if 0.0 <= sigma <= 50.0:
+            sigmas.append(sigma)
+            contrasts.append(float(c))
+
+    if len(sigmas) < 8:
+        return None, {"ok": False, "reason": "too_few_valid_edges", "n_valid": len(sigmas)}
+
+    sigma_med = float(np.median(np.array(sigmas, dtype=np.float32)))
+    stats = {
+        "ok": True,
+        "sigma_med": sigma_med,
+        "n_valid": len(sigmas),
+        "roi": (int(x0), int(y0), int(x1 - x0), int(y1 - y0)),
+        "contrast_med": float(np.median(np.array(contrasts, dtype=np.float32))) if contrasts else None
+    }
+    if debug:
+        stats["sigma_all"] = sigmas[:]
+    return sigma_med, stats
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
