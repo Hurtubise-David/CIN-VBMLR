@@ -2243,8 +2243,8 @@ class ExrSequencePage(QtWidgets.QWidget):
                     self.lbl_sigma.setText(f"σ(px): {sigma_px:.3f}   (n={st.get('n_valid',0)})")
 
                     model = build_defocus_model_from_row(
-                        row,
-                        pixel_pitch_um=5.0,  # TODO Alexa Mini LF true pitch
+                        row if row is not None else {},
+                        pixel_pitch_um=5.0,
                         k1=float(self.spin_k1.value()),
                         k2=0.0,
                         k3=0.0,
