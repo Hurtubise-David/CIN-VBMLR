@@ -797,6 +797,15 @@ def build_defocus_model_from_row(row: dict, pixel_pitch_um: float = 5.0,
 # ============================ Blur Sigma Estimator ============================ #
 
 @dataclass
+class ZgConfig:
+    enabled: bool = True
+    ema_beta: float = 0.90          # smoothing (0.0 = no smothing)
+    blue_percentile: float = 10.0   # take all X% nearest
+    min_pixels: int = 500           # min pixels for LED mask
+    use_largest_cc: bool = True     # take only largest composit
+    eps: float = 1e-6               
+
+@dataclass
 class BlurEstConfig:
     # ROI config (ratio of image size if roi_px is None)
     roi_ratio: float = 0.35          # 35% of min(W,H)
