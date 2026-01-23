@@ -616,6 +616,21 @@ class LensPriors:
     N: float = 2.8
     pixel_pitch_um: float = 5.0  # TODO: set correct value for Alexa Mini LF for accuracy
 
+@dataclass
+class ComplexLensCorrection:
+    """
+    “Lentille complexe” correction (field-dependent blur scaling).
+    LeBlanc-type: use a low-order polynomial in normalized radius r (0 center -> 1 corners).
+      scale(r) = 1 + k1 r^2 + k2 r^4 + k3 r^6
+    You can extend later (chromatic, astigmatism, anisotropic PSF, etc.)
+    """
+    k1: float = 0.0
+    k2: float = 0.0
+    k3: float = 0.0
+
+    def scale(self, r: float) -> float:
+        r2 = r * r
+        return 1.0 + self.k1 * r2 + self.k2 * (r2 * r2) + self.k3 * (r2 * r2 * r2)
 
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
