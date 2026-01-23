@@ -2296,16 +2296,58 @@ class ExrSequencePage(QtWidgets.QWidget):
                 vis8 = exr_to_preview_bgr8(exr3)
                 vis8 = self._draw_panel_bottom_left(vis8, panel_lines + ["VDA: computing..."])
             else:
-                # depth ready -> show depth
-                vis8 = depth_to_vis_u8(depth)
-                vis8 = self._draw_panel_bottom_left(vis8, panel_lines + ["VDA: ON"])
-                # --- Zg calibration (requires defocus depth) ---
+                # depth ready
+                depth_vda = depth
+
+                # --- Zg config from UI ---
                 try:
                     self.zg.cfg.enabled = bool(self.chk_zg.isChecked())
                     self.zg.cfg.ema_beta = float(self.spin_zg_beta.value())
                     self.zg.cfg.blue_percentile = float(self.spin_zg_bluepct.value())
                 except Exception:
                     pass
+
+                depth_m = None
+                if self.zg.cfg.enabled and (self._last_depth_defocus_m is not None):
+                    # 1) LED mask from VDA
+                    led_mask = self.zg.compute_led_mask_from_depth(depth_vda)
+
+                    # 2) update calibration (a, mode) using depth_defocus
+                    self.zg.update_from_led(
+                        depth_vda=depth_vda,
+                        depth_defocus_m=float(self._last_depth_defocus_m),
+                        led_mask=led_mask
+                    )
+
+                    # 3) apply -> depth in meters
+                    depth_m = self.zg.apply(depth_vda)
+
+                    # 4) UI feedback
+                    st = self.zg.last_stats or {}
+                    if st.get("ok", False):
+                        self.lbl_zg.setText(f"Zg: OK  mode={st.get('mode')}  a={st.get('a'):.6g}")
+                        self.lbl_zg_info.setText(f"ZgInfo: n_led={st.get('n_led')} v_led={st.get('v_led'):.4g} v_bg={st.get('v_bg')}")
+                    else:
+                        self.lbl_zg.setText("Zg: —")
+                        self.lbl_zg_info.setText(f"ZgInfo: {st.get('reason','not_ready')}")
+                else:
+                    self.lbl_zg.setText("Zg: —")
+                    self.lbl_zg_info.setText("ZgInfo: (need defocus depth + enable)")
+
+                # show depth VDA
+                vis8 = depth_to_vis_u8(depth_vda)
+
+                # afficher depth en mètres (depth_m)
+                if depth_m is not None:
+                    vis8 = depth_to_vis_u8(depth_m)
+
+                panel_plus = panel_lines + ["VDA: ON"]
+                if depth_m is not None:
+                    panel_plus.append("Zg: metric depth ON")
+                vis8 = self._draw_panel_bottom_left(vis8, panel_plus)
+
+
+
         else:
             # normal RGB
             vis8 = exr_to_preview_bgr8(exr3)
