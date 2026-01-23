@@ -601,6 +601,20 @@ class VDAAdapter:
 # ============================ Defocus / Blur Model (LeBlanc-style) ============================ #
 from dataclasses import dataclass
 
+@dataclass
+class LensPriors:
+    """
+    Priors from ARRI LDS / metadata.
+    Units:
+      - f_mm: focal length in mm
+      - focus_m: focus distance in meters
+      - N: f-number (T-stop if you want; start with N)
+      - pixel_pitch_um: sensor pixel pitch in micrometers (um)
+    """
+    f_mm: float = 35.0
+    focus_m: float = 2.0
+    N: float = 2.8
+    pixel_pitch_um: float = 5.0  # TODO: set correct value for Alexa Mini LF for accuracy
 
 
 # ============================ Writer Worker ============================ #
