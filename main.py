@@ -2237,6 +2237,13 @@ class ExrSequencePage(QtWidgets.QWidget):
                 # depth ready -> show depth
                 vis8 = depth_to_vis_u8(depth)
                 vis8 = self._draw_panel_bottom_left(vis8, panel_lines + ["VDA: ON"])
+                # --- Zg calibration (requires defocus depth) ---
+                try:
+                    self.zg.cfg.enabled = bool(self.chk_zg.isChecked())
+                    self.zg.cfg.ema_beta = float(self.spin_zg_beta.value())
+                    self.zg.cfg.blue_percentile = float(self.spin_zg_bluepct.value())
+                except Exception:
+                    pass
         else:
             # normal RGB
             vis8 = exr_to_preview_bgr8(exr3)
