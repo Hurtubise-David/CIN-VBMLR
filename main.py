@@ -1402,7 +1402,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.meta_clip_name = None
         self.meta_path = None
         self._exr_tc_cache = {}
-        
+
         self._last_depth_defocus_m = None
 
         self.vda = vda_wrapper   
@@ -2199,6 +2199,66 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         # --- build key cache (per path) ---
         cache_key = str(exr_path)
+
+        # ==========================================================
+        # DEF0CUS: estimate sigma + depth_defocus before VDA
+        # ==========================================================
+        self._last_depth_defocus_m = None
+
+        if hasattr(self, "chk_defocus") and self.chk_defocus.isChecked():
+            try:
+                # "RGB" stable image for blur
+                preview_bgr = exr_to_preview_bgr8(exr3)
+
+                cfg = BlurEstConfig(
+                    roi_ratio=float(self.spin_roi_ratio.value()),
+                    roi_px=int(self.spin_roi_px.value()),
+                    max_edges=200,
+                    half_profile=12,
+                    grad_thresh=0.06,
+                    min_contrast=0.08
+                )
+
+                sigma_px, st = estimate_defocus_sigma_px(preview_bgr, cfg=cfg, debug=False)
+
+                if sigma_px is None or not st.get("ok", False):
+                    self.lbl_sigma.setText("σ(px): —")
+                    self.lbl_depth_defocus.setText("Depth_defocus(m): —")
+                    self.lbl_blur_info.setText(f"BlurInfo: {st.get('reason','?')}")
+                else:
+                    self.lbl_sigma.setText(f"σ(px): {sigma_px:.3f}   (n={st.get('n_valid',0)})")
+
+                    model = build_defocus_model_from_row(
+                        row,
+                        pixel_pitch_um=5.0,  # TODO Alexa Mini LF true pitch
+                        k1=float(self.spin_k1.value()),
+                        k2=0.0,
+                        k3=0.0,
+                        alpha=float(self.spin_alpha.value())
+                    )
+
+                    rx, ry, rw, rh = st.get("roi", (0, 0, preview_bgr.shape[1], preview_bgr.shape[0]))
+                    cx = rx + 0.5 * rw
+                    cy = ry + 0.5 * rh
+                    rnorm = r_norm_from_xy(cx, cy, preview_bgr.shape[1], preview_bgr.shape[0])
+
+                    depth_defocus = model.depth_from_sigma_px(
+                        sigma_px, r_norm=rnorm, depth_min_m=0.2, depth_max_m=80.0
+                    )
+
+                    self._last_depth_defocus_m = float(depth_defocus)
+                    self.lbl_depth_defocus.setText(f"Depth_defocus(m): {depth_defocus:.3f}")
+                    self.lbl_blur_info.setText(
+                        f"BlurInfo: ROI={st.get('roi')} contrast~{st.get('contrast_med',0.0):.3f} r={rnorm:.2f}"
+                    )
+
+            except Exception as e:
+                self.lbl_sigma.setText("σ(px): —")
+                self.lbl_depth_defocus.setText("Depth_defocus(m): —")
+                self.lbl_blur_info.setText(f"BlurInfo: error {type(e).__name__}")
+                self._last_depth_defocus_m = None
+
+
 
         # --- VDA path: request depth async ---
         if self.vda_enabled and self.vda_worker is not None:
