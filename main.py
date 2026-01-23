@@ -1313,7 +1313,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         layout.addLayout(left, 3)
 
-        # Controls
+        # --- Import Controls ---
         right = QtWidgets.QVBoxLayout()
         box = QtWidgets.QGroupBox("EXR Dataset")
         g = QtWidgets.QGridLayout(box)
@@ -1324,6 +1324,51 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.btn_open_opti = QtWidgets.QPushButton("Load OptiTrack CSV…")
         self.btn_open_opti.setEnabled(False)
         self.btn_open_csv.setEnabled(False)
+
+        # --- Defocus blur controls ---
+        self.chk_defocus = QCheckBox("Defocus blur σ(px) + depth")
+        self.chk_defocus.setChecked(True)
+
+        self.spin_roi_px = QSpinBox()
+        self.spin_roi_px.setRange(0, 2000)
+        self.spin_roi_px.setValue(0)  # 0 = use ratio
+        self.spin_roi_px.setSuffix(" px ROI (0=auto)")
+
+        self.spin_roi_ratio = QDoubleSpinBox()
+        self.spin_roi_ratio.setRange(0.10, 0.90)
+        self.spin_roi_ratio.setSingleStep(0.05)
+        self.spin_roi_ratio.setValue(0.35)
+
+        self.spin_alpha = QDoubleSpinBox()
+        self.spin_alpha.setRange(0.05, 3.0)
+        self.spin_alpha.setSingleStep(0.05)
+        self.spin_alpha.setValue(0.8)
+
+        self.spin_k1 = QDoubleSpinBox()
+        self.spin_k1.setRange(-2.0, 2.0)
+        self.spin_k1.setSingleStep(0.01)
+        self.spin_k1.setValue(0.0)
+
+        self.lbl_sigma = QLabel("σ(px): —")
+        self.lbl_depth_defocus = QLabel("Depth_defocus(m): —")
+        self.lbl_blur_info = QLabel("BlurInfo: —")
+
+        # Ajoute au layout (exemple)
+        layout_controls.addWidget(self.chk_defocus)
+        layout_controls.addWidget(QLabel("ROI ratio"))
+        layout_controls.addWidget(self.spin_roi_ratio)
+        layout_controls.addWidget(QLabel("ROI px"))
+        layout_controls.addWidget(self.spin_roi_px)
+        layout_controls.addWidget(QLabel("alpha (circle→gauss)"))
+        layout_controls.addWidget(self.spin_alpha)
+        layout_controls.addWidget(QLabel("k1 (complex lens)"))
+        layout_controls.addWidget(self.spin_k1)
+        layout_controls.addWidget(self.lbl_sigma)
+        layout_controls.addWidget(self.lbl_depth_defocus)
+        layout_controls.addWidget(self.lbl_blur_info)
+
+
+
         g.addWidget(self.btn_open_opti, r, 0, 1, 2); r += 1
 
         g.addWidget(self.btn_open_exr, r, 0, 1, 2); r += 1
