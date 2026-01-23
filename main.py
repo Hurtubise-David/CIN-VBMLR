@@ -28,6 +28,7 @@ import inspect
 import traceback
 
 from PyQt5 import QtCore, QtGui, QtWidgets
+from dataclasses import dataclass
 
 # --- VDA paths ---
 import sys
@@ -599,7 +600,6 @@ class VDAAdapter:
 
 
 # ============================ Defocus / Blur Model (LeBlanc-style) ============================ #
-from dataclasses import dataclass
 
 @dataclass
 class LensPriors:
