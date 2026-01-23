@@ -1510,6 +1510,7 @@ class ExrSequencePage(QtWidgets.QWidget):
         if self.vda_enabled and self.vda is not None:
             self.vda.reset_stream_size()
             self.depth_cache.clear()
+            self._vda_submit_hw = None   
         self._render_current()
 
 
