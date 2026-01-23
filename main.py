@@ -2529,6 +2529,8 @@ class ExrSequencePage(QtWidgets.QWidget):
                         depth_max_m=80.0
                     )
                     self.lbl_depth_defocus.setText(f"Depth_defocus(m): {depth_defocus:.3f}")
+                    self._last_depth_defocus_m = float(depth_defocus)
+
 
                     self.lbl_blur_info.setText(
                         f"BlurInfo: ROI={st.get('roi')} contrast~{st.get('contrast_med',0.0):.3f} r={rnorm:.2f}"
@@ -2536,6 +2538,8 @@ class ExrSequencePage(QtWidgets.QWidget):
 
             except Exception as e:
                 self.lbl_blur_info.setText(f"BlurInfo: error {type(e).__name__}")
+                self._last_depth_defocus_m = None
+
         
 
 
