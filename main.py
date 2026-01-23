@@ -1535,6 +1535,13 @@ class ExrSequencePage(QtWidgets.QWidget):
         self.lbl_zg = QtWidgets.QLabel("Zg: —")
         self.lbl_zg_info = QtWidgets.QLabel("ZgInfo: —")
 
+        g.addWidget(self.chk_zg, r, 0, 1, 2); r += 1
+        g.addWidget(QtWidgets.QLabel("Zg EMA beta"), r, 0); g.addWidget(self.spin_zg_beta, r, 1); r += 1
+        g.addWidget(QtWidgets.QLabel("LED blue %ile"), r, 0); g.addWidget(self.spin_zg_bluepct, r, 1); r += 1
+        g.addWidget(self.lbl_zg, r, 0, 1, 2); r += 1
+        g.addWidget(self.lbl_zg_info, r, 0, 1, 2); r += 1
+
+
 
 
 
