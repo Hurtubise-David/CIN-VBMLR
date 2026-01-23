@@ -1506,6 +1506,9 @@ class ExrSequencePage(QtWidgets.QWidget):
 
     def _on_toggle_vda(self, on: bool):
         self.vda_enabled = bool(on) and (self.vda_worker is not None)
+        if self.vda_enabled and self.vda is not None:
+            self.vda.reset_stream_size()
+            self.depth_cache.clear()
         self._render_current()
 
 
