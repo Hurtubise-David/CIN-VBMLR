@@ -794,6 +794,20 @@ def build_defocus_model_from_row(row: dict, pixel_pitch_um: float = 5.0,
     corr = ComplexLensCorrection(k1=float(k1), k2=float(k2), k3=float(k3))
     return DefocusModel(priors=pri, corr=corr, alpha=float(alpha))
 
+# ============================ Blur Sigma Estimator ============================ #
+
+@dataclass
+class BlurEstConfig:
+    # ROI config (ratio of image size if roi_px is None)
+    roi_ratio: float = 0.35          # 35% of min(W,H)
+    roi_px: int = 0                  # if >0, use fixed square ROI in pixels
+    max_edges: int = 200             # number of edge samples to measure
+    half_profile: int = 12           # half length of 1D profile (pixels)
+    grad_thresh: float = 0.06        # threshold on gradient magnitude (in normalized 0..1 space)
+    min_contrast: float = 0.08       # ignore weak edges
+    # If your image is uint8, it will be normalized to 0..1 internally.
+    use_canny: bool = False          # optional mode; Sobel is usually enough
+
 # ============================ Writer Worker ============================ #
 class VideoWriterWorker(QtCore.QObject):
     status_msg = QtCore.pyqtSignal(str)
