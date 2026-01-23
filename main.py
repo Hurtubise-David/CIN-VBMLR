@@ -834,6 +834,7 @@ class ExrSequencePage(QtWidgets.QWidget):
 
         self.vda = vda_wrapper   
         self.vda_enabled = False
+        self._vda_submit_hw = None  # (h,w) constant for VDA inputs
         self.depth_cache = {}    # key = exr_path (or idx) -> depth float32
         self._last_req_key = None
 
